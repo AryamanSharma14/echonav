@@ -1,0 +1,14 @@
+faster-whisper
+mss
+Pillow
+pyautogui
+pynput
+edge-tts
+pyttsx3
+google-generativeai
+anthropic
+sounddevice
+soundfile
+numpy
+pytest
+pytest-mock

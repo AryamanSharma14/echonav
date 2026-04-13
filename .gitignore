@@ -1,0 +1,34 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Environment variables / secrets
+.env
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp audio files
+*.wav
+*.mp3
