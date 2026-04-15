@@ -3,6 +3,13 @@
 Edit + push to update. Both Claude instances read this at session start.
 Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 
+## Pre-hackathon prep ✅ (done 2026-04-15 night)
+- [x] ✅ venv + all deps installed
+- [x] ✅ Smoke tests: Whisper, TTS, pyautogui, vision — all PASS
+- [x] ✅ Groq wired as primary vision provider (free, no billing needed)
+- [x] ✅ Coordination docs: CLAUDE.md, HACKATHON.md, TODO.md, PROGRESS.md, log-push.sh
+- [x] ✅ GROQ_API_KEY in .env (lead machine)
+
 ## CP1 — Foundation (target 10:30)
 - [ ] ⬜ **T1** Project setup — `requirements.txt`, `config.py`, `tests/__init__.py` — _lead_
 - [ ] ⬜ **T2** Screen capture (`screen.py`) — _ai_
@@ -11,7 +18,7 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - [ ] ⬜ **T5** Listener / spacebar (`listener.py`) — _lead_
 
 ## CP2 — Brain (target 13:00)
-- [ ] ⬜ **T6** Vision (Gemini + Claude) — `vision.py` — _ai_
+- [ ] ⬜ **T6** Vision (`vision.py`) — Groq primary, Gemini fallback — _ai_
 - [ ] ⬜ **T7** Executor (`executor.py`) — _lead_
 - [ ] ⬜ **T8** Special voice commands (`commands.py`) — _lead_
 
@@ -20,11 +27,11 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - [ ] ⬜ **T10** `main.py` wiring — _both_
 
 ## CP4 — Polish (target 17:30)
-- [ ] ⬜ **T11** Windows auto-start (`setup.py`, `watchdog.py`) — _lead_
+- [ ] ⬜ **T11** Windows auto-start (`setup.py`, `watchdog.py`) — _lead_ (cut if behind)
 - [ ] ⬜ **T12** Full test suite green — _lead_
 
 ## CP5 — Demo (target 19:00)
-- [ ] ⬜ **T13** Claude Computer Use upgrade (stretch) — _ai_
+- [ ] ⬜ **T13** Claude Computer Use upgrade — _ai_ (stretch, cut first)
 - [ ] ⬜ **T14** End-to-end demo verification — _all_
 
 ## Non-code track (parallel, all day)
