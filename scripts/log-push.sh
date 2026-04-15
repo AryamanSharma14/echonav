@@ -13,14 +13,14 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 STAMP=$(date +"%Y-%m-%d %H:%M")
 MSG="$1"
 
-# Insert new entry below the marker in PROGRESS.md
+# Insert new entry below the marker in docs/PROGRESS.md
 TMP=$(mktemp)
 awk -v entry="## $STAMP — $NAME — $BRANCH\n- $MSG\n" '
   /<!-- New entries go here -->/ { print; print ""; print entry; next }
   { print }
-' PROGRESS.md > "$TMP" && mv "$TMP" PROGRESS.md
+' docs/PROGRESS.md > "$TMP" && mv "$TMP" docs/PROGRESS.md
 
-git add PROGRESS.md TODO.md
+git add docs/PROGRESS.md docs/TODO.md
 git commit -m "log: $BRANCH — $(echo "$MSG" | head -c 60)" || true
 git push
 echo "Logged and pushed."
