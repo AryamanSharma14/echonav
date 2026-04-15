@@ -53,17 +53,16 @@ Owns the agent loop, executor, listener, and main.py. You glue everything togeth
 ### Jai — AI + Voice
 Owns the "intelligent" bits: vision module (prompt engineering against Gemini/Claude), STT tuning, screen capture. If time allows, Jai attempts Task 13 (Claude Computer Use) as the flashy demo upgrade.
 
-### Anya — QA / Demo / Docs (no-code-heavy path)
-Not sure on her stack level — give her work that is valuable but doesn't block the critical path:
+### Anya — QA / Demo / Docs (NO Claude Code — no AI pair)
+Anya does not have Claude Code. Keep her off the critical code path. She owns the non-code surface of the project:
 
-1. **TTS module (Task 3)** — isolated, well-scoped, has a full TDD spec. Good first task.
-2. **Special voice commands (Task 8)** — pure Python, string matching. Low risk.
-3. **Bug-bashing from CP2 onward** — run the agent blindfolded (literally close your eyes), find where it fails, file issues.
-4. **Demo prep** — write the pitch script, record the demo video, prep slides.
-5. **README + usage docs** — what judges will read first.
-6. **Accessibility testing** — is the TTS actually usable? Are the confirmation prompts clear?
+1. **Demo prep (primary)** — pitch script, 2-min demo video, slide deck. Start morning, polish all day.
+2. **README + usage docs** — what judges open first. Screenshots, a 30-second "what is this" section, install steps.
+3. **Accessibility bug-bash from CP2** — literally close her eyes and try to use the agent. Log every point of confusion in `TODO.md`'s bug list.
+4. **Pair-programming** — sit next to Jai or Aryaman for Task 3 (TTS) or Task 8 (commands) if she wants to code. Lead drives the keyboard, she reviews logic and writes test cases on paper.
+5. **Judge-facing polish** — project logo, landing screenshot, devpost/submission form.
 
-If Anya is a strong coder, swap her into Task 11/12 or let her pair with Jai on Task 13.
+Reassigned code tasks: **Tasks 3, 8, 11, 12 → Aryaman + Jai.** Anya is not on the Claude-to-Claude sync loop.
 
 ---
 
