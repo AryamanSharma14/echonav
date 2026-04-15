@@ -1,12 +1,16 @@
 import os
 
 # ---------------------------------------------------------------------------
-# Model provider — switch between "gemini" (free) and "claude" (paid, better)
+# Model provider — "groq" (free, fast) | "gemini" | "claude" (paid, best)
 # ---------------------------------------------------------------------------
-MODEL_PROVIDER = "gemini"
+MODEL_PROVIDER = "groq"
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+
+# Groq vision model — free tier, fast
+GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 # ---------------------------------------------------------------------------
 # Speech-to-text

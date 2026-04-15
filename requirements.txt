@@ -5,6 +5,7 @@ pyautogui
 pynput
 edge-tts
 pyttsx3
+groq
 google-genai
 anthropic
 sounddevice
