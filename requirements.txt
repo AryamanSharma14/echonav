@@ -5,7 +5,7 @@ pyautogui
 pynput
 edge-tts
 pyttsx3
-google-generativeai
+google-genai
 anthropic
 sounddevice
 soundfile
