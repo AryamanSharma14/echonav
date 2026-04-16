@@ -91,10 +91,19 @@ class App:
 
         # --- Regular goal → agent loop in background thread ---
         if not self._goal_lock.acquire(blocking=False):
-            tts.speak("Still working on the previous task. Please wait.")
-            if self._overlay:
-                self._overlay.update("idle")
-            return
+            # If stop was just called the agent thread may still be winding down —
+            # wait up to 3 s for it to release the lock before giving up.
+            if agent._cancel_event.is_set():
+                if not self._goal_lock.acquire(blocking=True, timeout=3.0):
+                    tts.speak("Still finishing the previous task. Please wait a moment.")
+                    if self._overlay:
+                        self._overlay.update("idle")
+                    return
+            else:
+                tts.speak("Still working on the previous task. Please wait.")
+                if self._overlay:
+                    self._overlay.update("idle")
+                return
         threading.Thread(
             target=self._run_goal,
             args=(text,),

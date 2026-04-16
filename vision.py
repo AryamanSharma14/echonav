@@ -51,8 +51,13 @@ def _build_user_message(goal: str, history: list) -> str:
     recent = history[-10:]
     history_str = ""
     if recent:
-        steps = "\n".join(f"- {h.get('action')}: {h.get('narration', '')}" for h in recent)
-        history_str = f"\nActions taken so far:\n{steps}"
+        steps = []
+        for h in recent:
+            line = f"- {h.get('action')}: {h.get('narration', '')}"
+            if not h.get("had_effect", True):
+                line += "  ⚠ NO SCREEN CHANGE DETECTED — this action had no visible effect, try a different approach"
+            steps.append(line)
+        history_str = f"\nActions taken so far:\n" + "\n".join(steps)
     return f"Goal: {goal}{history_str}\n\nWhat is the single next action?"
 
 
