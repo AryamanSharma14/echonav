@@ -6,6 +6,13 @@ import vision
 import executor
 import config
 
+_cancel_event = threading.Event()
+
+
+def cancel() -> None:
+    """Signal the running agent loop to stop at the next step."""
+    _cancel_event.set()
+
 
 def run_goal(
     goal: str,
@@ -16,11 +23,16 @@ def run_goal(
     Run the agent loop for one goal.
     Loops up to MAX_STEPS times: capture → AI → narrate → confirm (if major) → execute.
     """
+    _cancel_event.clear()
     history: list = []
     repeat_count = 0
-    last_action_key = None
+    last_click_xy = None
 
     for _step in range(config.MAX_STEPS):
+        if _cancel_event.is_set():
+            tts.speak("Task cancelled.")
+            return
+
         screenshot = screen.capture()
 
         action = _get_action_with_retries(screenshot, goal, history)
@@ -33,16 +45,19 @@ def run_goal(
             tts.speak(action.get("message", "Task complete."))
             return
 
-        # Loop detection: if same action repeats 3 times, give up
-        action_key = (action.get("action"), action.get("x"), action.get("y"), action.get("text"), action.get("key"))
-        if action_key == last_action_key:
-            repeat_count += 1
-            if repeat_count >= 3:
-                tts.speak("I seem to be stuck. Please try rephrasing your command.")
-                return
+        # Loop detection: fuzzy for clicks (within 20px), exact for other actions
+        if action.get("action") == "click":
+            x, y = action.get("x", 0), action.get("y", 0)
+            if last_click_xy and abs(x - last_click_xy[0]) < 20 and abs(y - last_click_xy[1]) < 20:
+                repeat_count += 1
+                if repeat_count >= 3:
+                    tts.speak("I seem to be stuck clicking the same spot. Please try rephrasing.")
+                    return
+            else:
+                repeat_count = 0
+                last_click_xy = (x, y)
         else:
-            repeat_count = 0
-            last_action_key = action_key
+            last_click_xy = None
 
         narration = action.get("narration", "Taking action.")
 

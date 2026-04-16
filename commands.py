@@ -66,6 +66,8 @@ def _go_back() -> None:
 
 
 def _stop() -> None:
+    import agent as _agent
+    _agent.cancel()   # signal running loop to halt at next step
     tts.speak("Stopped. Hold spacebar to give me a new task.")
     raise StopCommand()
 

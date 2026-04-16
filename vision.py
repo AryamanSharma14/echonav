@@ -18,8 +18,8 @@ Rules:
 
 Windows-specific guidance:
 - To open an app (e.g. Brave, Chrome, Notepad): press the Win key, then type ONLY the app name (e.g. "brave"), then press Enter. Do NOT type "open brave" — just "brave".
-- To navigate to a website: click the browser address bar, type the URL (e.g. "gmail.com"), press Enter.
-- To open a URL directly: use {"action": "key", "key": "win"} then type app name, OR click address bar and type URL.
+- To open a website: click the browser address bar, press Ctrl+A to clear it, type the FULL URL (e.g. "gmail.com", "maps.google.com", "youtube.com"), press Enter. NEVER search for a site and click a result — always navigate directly via URL.
+- Do NOT click search results in a browser — type the URL directly in the address bar instead.
 - The Windows taskbar is at the bottom of the screen. The Start button is the Windows logo on the left.
 - If you pressed Win and the search box is open, type only the app name and press Enter.
 - After pressing Enter to launch an app, ALWAYS use a {"action": "wait"} step before doing anything else — the app needs time to open.
