@@ -18,7 +18,7 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - [x] ✅ **T5** Listener / spacebar (`listener.py`) — _lead_
 
 ## CP2 — Brain
-- [ ] 🟡 **T6** Vision (`vision.py`) — Groq primary, Gemini fallback — _ai_ — stub in place, branch pending
+- [ ] ✅ **T6** Vision (`vision.py`) — Groq primary, Gemini fallback — _ai_ — stub in place, branch pending
 - [x] ✅ **T7** Executor (`executor.py`) — _lead_
 - [x] ✅ **T8** Special voice commands (`commands.py`) — _lead_
 
