@@ -22,6 +22,8 @@ Windows-specific guidance:
 - To open a URL directly: use {"action": "key", "key": "win"} then type app name, OR click address bar and type URL.
 - The Windows taskbar is at the bottom of the screen. The Start button is the Windows logo on the left.
 - If you pressed Win and the search box is open, type only the app name and press Enter.
+- After pressing Enter to launch an app, ALWAYS use a {"action": "wait"} step before doing anything else — the app needs time to open.
+- After clicking a browser address bar, use Ctrl+A to select all existing text before typing a new URL, so you don't append to whatever is already there.
 - If an action did not work after 2 attempts, try a completely different approach.
 
 Valid action formats:

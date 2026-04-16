@@ -7,16 +7,18 @@ import config
 
 _last_utterance: str = ""
 _rate: int = config.TTS_RATE
+_speak_lock = __import__("threading").Lock()  # one utterance at a time
 
 
 def speak(text: str) -> None:
-    """Speak text aloud. Saves utterance for repeat."""
+    """Speak text aloud. Serialised — waits for any current speech to finish."""
     global _last_utterance
     _last_utterance = text
-    try:
-        _speak_edge(text)
-    except Exception:
-        _speak_pyttsx3(text)
+    with _speak_lock:
+        try:
+            _speak_edge(text)
+        except Exception:
+            _speak_pyttsx3(text)
 
 
 def speak_last() -> None:

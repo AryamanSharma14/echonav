@@ -28,6 +28,7 @@ class App:
         self._overlay = overlay
         self._waiting_for_confirmation = threading.Event()
         self._confirmation_queue: queue.Queue = queue.Queue()
+        self._goal_lock = threading.Lock()   # only one agent goal at a time
         self._listener = listener_module.Listener(
             on_utterance=self._handle_utterance,
             on_start=self._on_start_recording,
@@ -89,6 +90,11 @@ class App:
             return
 
         # --- Regular goal → agent loop in background thread ---
+        if not self._goal_lock.acquire(blocking=False):
+            tts.speak("Still working on the previous task. Please wait.")
+            if self._overlay:
+                self._overlay.update("idle")
+            return
         threading.Thread(
             target=self._run_goal,
             args=(text,),
@@ -96,13 +102,15 @@ class App:
         ).start()
 
     def _run_goal(self, text: str) -> None:
-        if self._overlay:
-            self._overlay.update("acting", text)
-        agent.run_goal(text, self._waiting_for_confirmation, self._confirmation_queue)
-        if self._overlay:
-            self._overlay.update("done")
-            # Reset to idle after a short pause
-            threading.Timer(2.0, lambda: self._overlay.update("idle")).start()
+        try:
+            if self._overlay:
+                self._overlay.update("acting", text)
+            agent.run_goal(text, self._waiting_for_confirmation, self._confirmation_queue)
+            if self._overlay:
+                self._overlay.update("done")
+                threading.Timer(2.0, lambda: self._overlay.update("idle")).start()
+        finally:
+            self._goal_lock.release()
 
 
 def main() -> None:
