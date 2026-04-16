@@ -63,7 +63,7 @@ def _groq_action(screenshot_bytes: bytes, goal: str, history: list) -> dict:
     screenshot_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
     
     response = client.chat.completions.create(
-        model="llama-3.2-90b-vision-preview", # Using Groq's available vision model
+        model=config.GROQ_MODEL,
         messages=[
             {
                 "role": "user",
