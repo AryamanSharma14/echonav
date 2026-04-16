@@ -9,12 +9,14 @@ SAMPLE_RATE = 16000
 class Listener:
     """Detects spacebar hold, records audio, calls on_utterance when released."""
 
-    def __init__(self, on_utterance):
+    def __init__(self, on_utterance, on_start=None):
         """
         on_utterance: callable(audio: np.ndarray, sample_rate: int)
             Called in a background thread when the user releases spacebar.
+        on_start: optional callable() — called when recording begins (spacebar pressed).
         """
         self._on_utterance = on_utterance
+        self._on_start = on_start
         self._recording = False
         self._audio_chunks: list = []
         self._stream = None
@@ -29,6 +31,8 @@ class Listener:
         if key == keyboard.Key.space and not self._recording:
             self._recording = True
             self._audio_chunks = []
+            if self._on_start:
+                self._on_start()
             self._stream = sd.InputStream(
                 samplerate=SAMPLE_RATE,
                 channels=1,
