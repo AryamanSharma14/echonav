@@ -6,6 +6,8 @@ Thread-safe: call overlay.update() from any thread.
 Run overlay.run() from the MAIN thread — it blocks (tkinter mainloop).
 """
 
+import ctypes
+import ctypes.wintypes
 import queue
 import tkinter as tk
 from tkinter import font as tkfont
@@ -64,6 +66,16 @@ class Overlay:
         root.attributes("-topmost", True)
         root.attributes("-alpha", _ALPHA)
         root.configure(bg=_BG)
+
+        # ── Prevent the overlay from stealing keyboard focus ───────────
+        # WS_EX_NOACTIVATE: window never becomes the active window when
+        # clicked or shown — keystrokes always go to whatever app had focus.
+        root.update_idletasks()   # ensure HWND is allocated
+        hwnd = root.winfo_id()
+        GWL_EXSTYLE    = -20
+        WS_EX_NOACTIVATE = 0x08000000
+        current = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+        ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, current | WS_EX_NOACTIVATE)
 
         # ── Position: dead center ──────────────────────────────────────
         sw = root.winfo_screenwidth()

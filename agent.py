@@ -103,9 +103,15 @@ def run_goal(
             return
 
         next_screenshot = screen.capture()
-        had_effect = _screenshots_differ(screenshot, next_screenshot)
-        if not had_effect:
-            print(f"[agent] step {_step + 1}: no screen change detected after action")
+
+        # Key actions (ctrl+l, ctrl+a, enter, win…) often cause only a focus
+        # highlight — invisible at 16×16 hash resolution. Always trust them.
+        if action.get("action") == "key":
+            had_effect = True
+        else:
+            had_effect = _screenshots_differ(screenshot, next_screenshot)
+            if not had_effect:
+                print(f"[agent] step {_step + 1}: no screen change detected after action")
 
         history.append({**action, "had_effect": had_effect})
         screenshot = next_screenshot
