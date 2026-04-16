@@ -3,6 +3,7 @@ import tempfile
 import os
 import subprocess
 import pyttsx3
+from mutagen.mp3 import MP3
 import config
 
 _last_utterance: str = ""
@@ -48,11 +49,14 @@ async def _speak_edge_async(text: str) -> None:
 
     try:
         await communicate.save(temp_path)
+        # Get actual MP3 duration to avoid hardcoded sleep
+        duration = MP3(temp_path).info.length
+        sleep_time = int(duration) + 1
         subprocess.run(
             ["powershell", "-c",
              f"Add-Type -AssemblyName presentationCore; "
              f"$mp = New-Object system.windows.media.mediaplayer; "
-             f"$mp.open('{temp_path}'); $mp.Play(); Start-Sleep -s 5; $mp.Stop()"],
+             f"$mp.open('{temp_path}'); $mp.Play(); Start-Sleep -s {sleep_time}; $mp.Stop()"],
             capture_output=True, timeout=30
         )
     finally:

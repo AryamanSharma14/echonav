@@ -86,6 +86,56 @@ def _faster() -> None:
     tts.speak("Speaking faster.")
 
 
+def _scroll_down() -> None:
+    pyautogui.scroll(-5)
+    tts.speak("Scrolled down.")
+
+
+def _scroll_up() -> None:
+    pyautogui.scroll(5)
+    tts.speak("Scrolled up.")
+
+
+def _close_this() -> None:
+    pyautogui.hotkey("alt", "F4")
+    tts.speak("Closing.")
+
+
+def _new_tab() -> None:
+    pyautogui.hotkey("ctrl", "t")
+    tts.speak("New tab opened.")
+
+
+def _close_tab() -> None:
+    pyautogui.hotkey("ctrl", "w")
+    tts.speak("Tab closed.")
+
+
+def _find_on_page() -> None:
+    pyautogui.hotkey("ctrl", "f")
+    tts.speak("Find box opened.")
+
+
+def _zoom_in() -> None:
+    pyautogui.hotkey("ctrl", "plus")
+    tts.speak("Zoomed in.")
+
+
+def _zoom_out() -> None:
+    pyautogui.hotkey("ctrl", "minus")
+    tts.speak("Zoomed out.")
+
+
+def _switch_app() -> None:
+    pyautogui.hotkey("alt", "tab")
+    tts.speak("Switching app.")
+
+
+def _copy_that() -> None:
+    pyautogui.hotkey("ctrl", "c")
+    tts.speak("Copied.")
+
+
 def _ask_vision(screenshot_bytes: bytes, prompt: str) -> str:
     """Single-shot vision query via Groq — not part of the agent loop."""
     from groq import Groq
@@ -115,4 +165,14 @@ _COMMANDS = {
     "read that again": "_repeat",
     "speak slower": "_slower",
     "speak faster": "_faster",
+    "scroll down": "_scroll_down",
+    "scroll up": "_scroll_up",
+    "close this": "_close_this",
+    "new tab": "_new_tab",
+    "close tab": "_close_tab",
+    "find on page": "_find_on_page",
+    "zoom in": "_zoom_in",
+    "zoom out": "_zoom_out",
+    "switch app": "_switch_app",
+    "copy that": "_copy_that",
 }

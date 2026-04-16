@@ -1,6 +1,7 @@
 import threading
 import numpy as np
 import sounddevice as sd
+import winsound
 from pynput import keyboard
 
 SAMPLE_RATE = 16000
@@ -31,6 +32,7 @@ class Listener:
         if key == keyboard.Key.space and not self._recording:
             self._recording = True
             self._audio_chunks = []
+            winsound.Beep(880, 80)  # high beep = start recording
             if self._on_start:
                 self._on_start()
             self._stream = sd.InputStream(
@@ -44,6 +46,7 @@ class Listener:
     def _on_release(self, key) -> None:
         if key == keyboard.Key.space and self._recording:
             self._recording = False
+            winsound.Beep(440, 80)  # low beep = stop recording
             if self._stream:
                 self._stream.stop()
                 self._stream.close()
