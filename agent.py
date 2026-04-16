@@ -1,6 +1,5 @@
 import hashlib
 import io
-import time
 import threading
 import queue
 import pyautogui
@@ -93,14 +92,26 @@ def run_goal(
         else:
             tts.speak(narration)
 
+        # TTS blocks for the full utterance — re-check cancel before acting
+        if _cancel_event.is_set():
+            return
+
         executor.execute(action, scale_x=scale_x, scale_y=scale_y)
 
-        # Wait for the UI to respond, then capture the next screenshot
-        _wait_for_action(action)
+        # Interruptible wait — returns immediately if stop is called mid-sleep
+        if _wait_for_action(action):
+            return
+
         next_screenshot = screen.capture()
-        had_effect = _screenshots_differ(screenshot, next_screenshot)
-        if not had_effect:
-            print(f"[agent] step {_step + 1}: no screen change detected after action")
+
+        # Key actions (ctrl+l, ctrl+a, enter, win…) often cause only a focus
+        # highlight — invisible at 16×16 hash resolution. Always trust them.
+        if action.get("action") == "key":
+            had_effect = True
+        else:
+            had_effect = _screenshots_differ(screenshot, next_screenshot)
+            if not had_effect:
+                print(f"[agent] step {_step + 1}: no screen change detected after action")
 
         history.append({**action, "had_effect": had_effect})
         screenshot = next_screenshot
@@ -168,15 +179,23 @@ def _is_major_action(action: dict) -> bool:
     return any(kw in narration for kw in config.MAJOR_ACTION_KEYWORDS)
 
 
-def _wait_for_action(action: dict) -> None:
-    """Wait an appropriate amount of time after an action for the UI to respond."""
+def _wait_for_action(action: dict) -> bool:
+    """
+    Wait for the UI to respond after an action.
+
+    Uses _cancel_event.wait() instead of time.sleep() so the wait
+    unblocks immediately when the user says "stop".
+
+    Returns True if cancelled during the wait (caller must return immediately).
+    """
     act = action.get("action")
     if act == "wait":
-        pass  # executor already slept 1.5s
+        # executor already slept 1.5s; just check cancel state
+        return _cancel_event.is_set()
     elif act == "key" and action.get("key") in ("enter", "win"):
-        time.sleep(1.5)  # launching apps / submitting forms takes longer
+        return _cancel_event.wait(timeout=1.5)   # app launch / form submit
     else:
-        time.sleep(0.6)  # standard UI response time
+        return _cancel_event.wait(timeout=0.6)   # standard UI response
 
 
 def _screenshot_hash(screenshot_bytes: bytes) -> str:
