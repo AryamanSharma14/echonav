@@ -37,7 +37,7 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 ## Non-code track (parallel, all day)
 - [ ] ⬜ Pitch script (~90 sec spoken)
 - [ ] ⬜ Demo video (2 min, screen + narration)
-- [ ] ⬜ README.md with screenshots + install steps
+- [x] ✅ README.md with install steps, usage, architecture, config
 - [ ] ⬜ Devpost / submission form filled
 - [ ] ⬜ Accessibility bug-bash log (starts after CP2)
 - [ ] ⬜ Project logo / title card
