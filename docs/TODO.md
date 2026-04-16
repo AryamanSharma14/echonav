@@ -12,9 +12,9 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 
 ## CP1 — Foundation (target 10:30)
 - [ ] ⬜ **T1** Project setup — `requirements.txt`, `config.py`, `tests/__init__.py` — _lead_
-- [ ] ⬜ **T2** Screen capture (`screen.py`) — _ai_
+- [🟡] ⬜ **T2** Screen capture (`screen.py`) — _ai_
 - [ ] ⬜ **T3** TTS (`tts.py`) — _lead_
-- [ ] ⬜ **T4** STT (`stt.py`) — _ai_
+- [🟡] ⬜ **T4** STT (`stt.py`) — _ai_
 - [ ] ⬜ **T5** Listener / spacebar (`listener.py`) — _lead_
 
 ## CP2 — Brain ✅ (lead side done)
