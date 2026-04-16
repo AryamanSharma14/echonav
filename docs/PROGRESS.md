@@ -14,6 +14,23 @@ Format:
 
 <!-- New entries go here -->
 
+## 2026-04-16 14:00 — ai — master (3 bug fixes + post-action verification)
+- Done: Live-tested on Jai's machine (2880×1800, 2.25× DPI). Fixed 3 bugs, added post-action screen verification. 56/56 tests still green.
+- Next: T14 live reliability testing — need to verify Ctrl+L and Enter-after-search hold up across multiple demo scenarios. Then demo video.
+- Notes:
+
+  **Bug 9 — Normalised coords crash (FIXED)**
+  Model occasionally returns click coords as ratios (e.g. `x: 0.308, y: 0.185`) instead of pixels. After `int(0.308 × 2.25) = 0` both become `(0,0)` → top-left corner → pyautogui FailSafeException. `agent._validate_action()` now detects floats in [0.0, 1.0] and multiplies by screenshot dimensions (ss_w, ss_h). Out-of-bounds coords are rejected and injected as `had_effect: False` into history so the AI knows to try differently.
+
+  **Bug 10 — Stop didn't release goal lock in time (FIXED)**
+  `_cancel_event` is checked only at the top of each agent loop iteration, so the loop could be mid-TTS or mid-sleep when "stop" is said. `_goal_lock` stayed held for up to ~2s, causing the next command to get "still working." `main.py` now detects `_cancel_event.is_set()` and waits up to 3s for the lock before falling back to the "still working" message.
+
+  **Bug 11 — No feedback when actions had no effect (FIXED)**
+  Agent previously executed, narrated, and moved on with no check that anything changed. Added post-action screenshot diff: after each `executor.execute()`, `_wait_for_action()` sleeps (0.6s standard, 1.5s after Enter/Win), captures a new screenshot, and compares with a 16×16 perceptual hash. If the hash matches, `had_effect: False` is stored on the history entry. `vision._build_user_message()` surfaces this as an inline ⚠ warning in the next AI prompt so the model tries a different approach instead of repeating the failed action.
+
+  **Also: python-dotenv missing on Jai's machine (FIXED)**
+  `pip install python-dotenv` required on first run — was not in venv. Now documented here.
+
 ## 2026-04-16 12:00 — lead — master (end-to-end testing + 8 bug fixes)
 - Done: Full live testing of the pipeline. Found and fixed 8 bugs. 56/56 tests green. System now runs end-to-end — Brave opens, navigates to URLs, stop command cancels mid-task.
 - Next: T14 reliability tuning. The loop works but needs demo-quality polish. See bug list in TODO.md. Priority: make address bar navigation bulletproof (use Ctrl+L instead of clicking). Then record demo video.

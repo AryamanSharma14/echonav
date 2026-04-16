@@ -43,7 +43,10 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - [ ] ⬜ Project logo / title card
 
 ## Known issues / next to fix
-- Vision model sometimes tries to click Windows search result instead of typing URL directly — system prompt updated, needs verification
-- Address bar click coordinates are approximate (model picks them visually) — using Ctrl+L hotkey would be more reliable
-- `pyautogui.write()` types character-by-character and can be slow for long strings — consider `pyautogui.hotkey('ctrl','a') + write()` for address bar
-- After Brave opens from Start menu search, model sometimes clicks the Start menu result instead of pressing Enter — add `key: enter` guidance
+- ✅ Normalised coords crash (x/y as 0.0–1.0 floats → (0,0) → FailSafe) — fixed in `agent._validate_action()`
+- ✅ Stop command didn't release goal lock fast enough — fixed in `main.py` (3s wait when `_cancel_event` set)
+- ✅ No post-action verification — fixed: `_screenshots_differ()` hash check after every action; `had_effect` injected into AI prompt
+- ✅ python-dotenv missing on fresh venv — `pip install python-dotenv` (already in requirements.txt, install if missing)
+- ⬜ Vision model sometimes clicks Windows search result instead of pressing Enter — system prompt updated, needs live verification
+- ⬜ Address bar: Ctrl+L in system prompt but fragile if browser not focused — needs live verification
+- ⬜ `pyautogui.write()` slow for long strings — low priority for demo
