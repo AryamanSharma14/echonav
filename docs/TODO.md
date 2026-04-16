@@ -11,24 +11,24 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - [x] ✅ GROQ_API_KEY in .env (lead machine)
 
 ## CP1 — Foundation (target 10:30)
-- [ ] ⬜ **T1** Project setup — `requirements.txt`, `config.py`, `tests/__init__.py` — _lead_
+- [x] ✅ **T1** Project setup — `requirements.txt`, `config.py`, `tests/__init__.py` — _lead_
 - [ ] ⬜ **T2** Screen capture (`screen.py`) — _ai_
-- [ ] ⬜ **T3** TTS (`tts.py`) — _lead_
+- [x] ✅ **T3** TTS (`tts.py`) — _lead_
 - [ ] ⬜ **T4** STT (`stt.py`) — _ai_
-- [ ] ⬜ **T5** Listener / spacebar (`listener.py`) — _lead_
+- [x] ✅ **T5** Listener / spacebar (`listener.py`) — _lead_
 
 ## CP2 — Brain (target 13:00)
 - [ ] ⬜ **T6** Vision (`vision.py`) — Groq primary, Gemini fallback — _ai_
-- [ ] ⬜ **T7** Executor (`executor.py`) — _lead_
-- [ ] ⬜ **T8** Special voice commands (`commands.py`) — _lead_
+- [x] ✅ **T7** Executor (`executor.py`) — _lead_
+- [x] ✅ **T8** Special voice commands (`commands.py`) — _lead_
 
 ## CP3 — Loop alive (target 15:30)
-- [ ] ⬜ **T9** Agent loop (`agent.py`) — _lead_
-- [ ] ⬜ **T10** `main.py` wiring — _both_
+- [x] ✅ **T9** Agent loop (`agent.py`) — _lead_
+- [x] ✅ **T10** `main.py` wiring — _both_
 
 ## CP4 — Polish (target 17:30)
 - [ ] ⬜ **T11** Windows auto-start (`setup.py`, `watchdog.py`) — _lead_ (cut if behind)
-- [ ] ⬜ **T12** Full test suite green — _lead_
+- [x] ✅ **T12** Full test suite green — 38/38 passing — _lead_
 
 ## CP5 — Demo (target 19:00)
 - [ ] ⬜ **T13** Claude Computer Use upgrade — _ai_ (stretch, cut first)
