@@ -51,4 +51,4 @@ def test_all_valid_states_have_color():
 
 def test_all_valid_states_have_icon():
     for state in ["idle", "listening", "thinking", "acting", "confirming", "done", "error"]:
-        assert state in ov._STATE_ICONS
+        assert ov.Overlay._right_symbol(state) != ""
