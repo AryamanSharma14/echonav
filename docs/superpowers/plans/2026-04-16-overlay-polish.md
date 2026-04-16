@@ -1,3 +1,54 @@
+# EchoNav Overlay Polish Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Replace the single-window overlay with a two-layer UI: a full-screen glowing border that changes color with agent state, plus a refined minimal-glass center capsule.
+
+**Architecture:** One `Tk()` root = fullscreen transparent ScreenBorder window (only the 2px colored rectangle border is visible, interior is transparent via `-transparentcolor`). One `Toplevel` child = 580×82px CenterCapsule centered glass pill. Public `Overlay` class wraps both with the same `update(state, text)` / `run()` API as before. No caller changes.
+
+**Tech Stack:** Python 3.10, tkinter (stdlib), `queue.Queue` for thread safety.
+
+---
+
+## File Map
+
+| File | Action | Responsibility |
+|------|--------|----------------|
+| `overlay.py` | Full rewrite | All UI: ScreenBorder + CenterCapsule + Overlay facade |
+| `tests/test_overlay.py` | No change | All 5 tests must pass as-is |
+
+---
+
+### Task 1: Verify baseline
+
+**Files:**
+- Read: `tests/test_overlay.py`
+- Read: `overlay.py`
+
+- [ ] **Step 1: Confirm you are on branch `ui-overlay-polish`**
+
+```bash
+git branch
+```
+Expected: `* ui-overlay-polish`
+
+- [ ] **Step 2: Run current test suite**
+
+```bash
+venv/Scripts/pytest tests/ -q
+```
+Expected: `56 passed` — confirm baseline before touching anything.
+
+---
+
+### Task 2: Rewrite overlay.py
+
+**Files:**
+- Modify: `overlay.py` (full rewrite)
+
+- [ ] **Step 1: Replace the entire contents of `overlay.py` with the following**
+
+```python
 """
 EchoNav status overlay — two-layer UI:
   1. ScreenBorder : fullscreen transparent window, 2px colored rect border only
@@ -249,3 +300,70 @@ def _blend(hex_color: str, alpha: int) -> str:
         int(bg[1] + (g - bg[1]) * a),
         int(bg[2] + (b - bg[2]) * a),
     )
+```
+
+- [ ] **Step 2: Run the tests**
+
+```bash
+venv/Scripts/pytest tests/ -q
+```
+Expected: `56 passed` — no failures.
+
+If `test_all_valid_states_have_color` fails: the `_STATE_COLORS` dict is missing a key — check all 7 states are present.
+If `test_all_valid_states_have_icon` fails: `Overlay._right_symbol` is not a static method — make sure the `@staticmethod` decorator is present.
+
+- [ ] **Step 3: Smoke test visually**
+
+```bash
+python -c "
+import overlay, threading, time
+o = overlay.Overlay()
+def cycle():
+    time.sleep(0.8)
+    for s in ['listening','thinking','acting','confirming','done','error','idle']:
+        o.update(s)
+        time.sleep(1.2)
+    import tkinter; o._root.after(200, o._root.destroy)
+threading.Thread(target=cycle, daemon=True).start()
+o.run()
+"
+```
+
+Expected: A glowing border appears around the entire screen AND a glass pill appears in the center. Both cycle through colors together. No errors in terminal.
+
+If you get `TclError: unknown option "-transparentcolor"`: you are not on Windows — this feature is Windows-only and expected to fail on Linux/macOS.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add overlay.py
+git commit -m "feat: two-layer overlay — fullscreen glowing border + center glass capsule"
+```
+
+---
+
+### Task 3: Push branch
+
+**Files:** none
+
+- [ ] **Step 1: Push the branch (do NOT merge)**
+
+```bash
+git push -u origin ui-overlay-polish
+```
+
+Expected: branch visible on GitHub at `origin/ui-overlay-polish`. Master is untouched.
+
+- [ ] **Step 2: Confirm both branches exist**
+
+```bash
+git branch -a | grep -E "master|ui-overlay"
+```
+
+Expected output includes:
+```
+* ui-overlay-polish
+  master
+  remotes/origin/master
+  remotes/origin/ui-overlay-polish
+```
