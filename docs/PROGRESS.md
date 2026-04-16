@@ -14,6 +14,17 @@ Format:
 
 <!-- New entries go here -->
 
+## 2026-04-16 16:00 — ai — master (Gemini provider fix + MODEL_PROVIDER env toggle)
+- Done: Fixed Gemini provider — explicit api_key wiring, updated model to gemini-2.5-flash, MODEL_PROVIDER now readable from .env. 56/56 tests green.
+- Next: T14 live verification with Gemini — test open-brave + navigate flow end-to-end.
+- Notes:
+
+  **Gemini model 404s (FIXED)**
+  gemini-2.0-flash and gemini-2.0-flash-001 both returned 404 "not available to new users." Listed available models via `client.models.list()` and switched to `gemini-2.5-flash` which is on the key. Also wired `config.GEMINI_API_KEY` explicitly into `genai.Client()` instead of relying on GOOGLE_API_KEY env var.
+
+  **MODEL_PROVIDER now .env-configurable (ADDED)**
+  `config.py` previously hardcoded `MODEL_PROVIDER = "groq"`. Now reads from env: `MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "groq")`. Switch providers by setting `MODEL_PROVIDER=gemini` or `MODEL_PROVIDER=groq` in `.env` — no code edits needed.
+
 ## 2026-04-16 15:30 — ai — master (bug fix: wait action false negative)
 - Done: Fixed Bug 12 — wait actions incorrectly got `had_effect=False`, causing the AI to re-run the previous step. 56/56 tests green.
 - Next: T14 live verification — retest open-brave + navigate-to-URL flow. Ctrl+L reliability still needs live confirmation.

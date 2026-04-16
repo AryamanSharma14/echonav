@@ -107,11 +107,11 @@ def _gemini_action(screenshot_bytes: bytes, goal: str, history: list) -> dict:
     # Fallback using google-genai SDK per HACKATHON.md
     from google import genai
     from google.genai import types
-    
-    client = genai.Client()
+
+    client = genai.Client(api_key=config.GEMINI_API_KEY)
     
     response = client.models.generate_content(
-        model='gemini-2.0-flash',
+        model='gemini-2.5-flash',
         contents=[
             SYSTEM_PROMPT, 
             _build_user_message(goal, history),

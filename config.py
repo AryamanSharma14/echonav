@@ -5,8 +5,9 @@ load_dotenv()   # loads .env from project root into os.environ
 
 # ---------------------------------------------------------------------------
 # Model provider — "groq" (free, fast) | "gemini" | "claude" (paid, best)
+# Set MODEL_PROVIDER in .env to switch without touching code.
 # ---------------------------------------------------------------------------
-MODEL_PROVIDER = "groq"
+MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "groq")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
