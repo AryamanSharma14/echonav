@@ -4,6 +4,12 @@ import pytest
 import agent
 
 
+@pytest.fixture(autouse=True)
+def no_scale(mocker):
+    """Patch _compute_scale so tests don't need real image bytes."""
+    mocker.patch("agent._compute_scale", return_value=(1.0, 1.0))
+
+
 def make_queues():
     waiting = threading.Event()
     confirm_q = queue.Queue()
@@ -36,7 +42,7 @@ def test_run_goal_executes_action_then_done(mocker):
 
     agent.run_goal("click something", waiting, confirm_q)
 
-    mock_execute.assert_called_once_with(actions[0])
+    mock_execute.assert_called_once_with(actions[0], scale_x=1.0, scale_y=1.0)
 
 
 def test_run_goal_retries_on_vision_error(mocker):
