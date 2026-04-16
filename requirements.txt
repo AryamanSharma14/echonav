@@ -1,3 +1,4 @@
+python-dotenv
 faster-whisper
 mss
 Pillow

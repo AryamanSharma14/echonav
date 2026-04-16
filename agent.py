@@ -25,6 +25,8 @@ def run_goal(
         if action is None:
             return  # Error already spoken
 
+        print(f"[agent] step {_step + 1}: {action}")
+
         if action["action"] == "done":
             tts.speak(action.get("message", "Task complete."))
             return
@@ -57,7 +59,8 @@ def _get_action_with_retries(screenshot: bytes, goal: str, history: list):
     for attempt in range(config.MAX_RETRIES):
         try:
             return vision.get_next_action(screenshot, goal, history)
-        except Exception:
+        except Exception as e:
+            print(f"[agent] vision error (attempt {attempt + 1}): {e}")
             if attempt == config.MAX_RETRIES - 1:
                 tts.speak("I ran into a technical problem. Please try again.")
                 return None

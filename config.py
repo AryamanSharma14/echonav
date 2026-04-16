@@ -1,4 +1,7 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()   # loads .env from project root into os.environ
 
 # ---------------------------------------------------------------------------
 # Model provider — "groq" (free, fast) | "gemini" | "claude" (paid, best)
