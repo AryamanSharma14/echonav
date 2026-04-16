@@ -14,6 +14,11 @@ Format:
 
 <!-- New entries go here -->
 
+## 2026-04-16 10:30 — lead — master (T2 + T4 merged, 50/50 tests)
+- Done: Pulled Jai's task-2-screen (screen.py — mss + Pillow JPEG, 3 tests) and task-4-stt (stt.py — faster-whisper int8 CPU, 4 tests). Created PRs #8 and #9, squash-merged both to master. Full suite now 50/50. overlay.py + demo.py already on master from previous session.
+- Next: Waiting on Jai — T6 (vision.py). Once that lands, T14 end-to-end demo is unblocked. Non-code track: pitch script, demo video, Devpost form.
+- Notes: stt.py uses `_model` global + `load_model()` for caching — model loads once per session. screen.py resizes to `SCREENSHOT_MAX_WIDTH` before JPEG encode. demo.py runnable right now as full UX mock.
+
 ## 2026-04-16 — lead — master (all lead tasks complete, PRs merged)
 - Done: T1 (config/setup), T3 (tts.py), T5 (listener.py), T7 (executor.py), T8 (commands.py), T9 (agent.py), T10 (main.py). Full test suite 38/38 passing. Stubs for screen.py, stt.py, vision.py in place. All feature branches squash-merged to master via PRs #1–#6.
 - Next: Waiting on Jai — T2 (screen.py), T4 (stt.py), T6 (vision.py). Once those land, T14 end-to-end demo.
