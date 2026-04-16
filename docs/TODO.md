@@ -13,18 +13,18 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 ## CP1 — Foundation ✅ (lead side done)
 - [x] ✅ **T1** Project setup — `requirements.txt`, `config.py`, `tests/__init__.py` — _lead_
 - [ ] ⬜ **T2** Screen capture (`screen.py`) — _ai_ — stub in place
-- [x] ✅ **T3** TTS (`tts.py`) — _lead_ — branch: task-3-tts
+- [x] ✅ **T3** TTS (`tts.py`) — _lead_
 - [ ] ⬜ **T4** STT (`stt.py`) — _ai_ — stub in place
-- [x] ✅ **T5** Listener / spacebar (`listener.py`) — _lead_ — branch: task-5-listener
+- [x] ✅ **T5** Listener / spacebar (`listener.py`) — _lead_
 
 ## CP2 — Brain ✅ (lead side done)
 - [ ] ⬜ **T6** Vision (`vision.py`) — Groq primary, Gemini fallback — _ai_ — stub in place
-- [x] ✅ **T7** Executor (`executor.py`) — _lead_ — branch: task-7-executor
-- [x] ✅ **T8** Special voice commands (`commands.py`) — _lead_ — branch: task-8-commands
+- [x] ✅ **T7** Executor (`executor.py`) — _lead_
+- [x] ✅ **T8** Special voice commands (`commands.py`) — _lead_
 
 ## CP3 — Loop alive ✅
-- [x] ✅ **T9** Agent loop (`agent.py`) — _lead_ — branch: task-9-agent
-- [x] ✅ **T10** `main.py` wiring — _both_ — branch: task-10-main
+- [x] ✅ **T9** Agent loop (`agent.py`) — _lead_
+- [x] ✅ **T10** `main.py` wiring — _both_
 
 ## CP4 — Polish
 - [ ] ⬜ **T11** Windows auto-start (`setup.py`, `watchdog.py`) — _lead_ (cut if behind)
