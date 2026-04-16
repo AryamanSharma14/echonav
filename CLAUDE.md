@@ -1,7 +1,7 @@
 # EchoNav — Project Instructions for Claude
 
 ## Project
-Voice-controlled desktop AI agent for blind users. Spacebar-to-talk → Whisper STT → Gemini Vision analyzes screenshot → pyautogui executes one action → edge-tts narrates → loop.
+Voice-controlled desktop AI agent for blind users. Ctrl+Space-to-talk → Whisper STT → Groq Vision (llama-4-scout-17b) analyzes screenshot → pyautogui executes one action → edge-tts narrates → loop.
 
 Full-day hackathon. Two Claude Code instances work on this repo in parallel (the `lead` role and the `ai` role). A third contributor works the non-code track (demo, docs, QA) without Claude.
 
@@ -13,6 +13,15 @@ Full-day hackathon. Two Claude Code instances work on this repo in parallel (the
 - **Progress log:** `docs/PROGRESS.md` (append-only; read this at session start)
 
 Read the plan before starting a task. Do not re-architect.
+
+## Environment (as of 2026-04-15 night)
+- venv: Python 3.10.11 (3.11+ target for prod; fine for hackathon)
+- Vision provider: **Groq primary** (`MODEL_PROVIDER="groq"` in `config.py`), Gemini fallback
+- Groq model: `meta-llama/llama-4-scout-17b-16e-instruct`
+- `GROQ_API_KEY` must be in `.env` (personal, not committed)
+- Gemini free tier is broken on current GCP project (limit: 0) — do not rely on it
+- `google-genai` kept in `requirements.txt` as fallback only; do not use deprecated `google-generativeai` SDK
+- All 4 smoke tests passing: Whisper STT, edge-tts, pyautogui, Groq vision
 
 ## Session Start Ritual (MANDATORY)
 Every new Claude session on this repo:
@@ -48,10 +57,11 @@ Two Claude instances, one repo. Rules:
 - Commit format: `task-<N>: <what>`. No "generated with Claude" footers. No teammate names.
 
 ## Hard Rules
-- Python 3.11+ target (3.10 works in venv for now). Windows-first.
+- Python 3.10.11 in venv; 3.11+ target for prod. Windows-first.
 - Follow the plan task-by-task. TDD. No scope creep.
 - Do not touch `../Dayzero/` except to update the plan/spec.
 - If a test is flaky, fix the test, not the assertion.
+- Do not use the deprecated `google-generativeai` SDK. Use `google-genai` if Gemini is needed.
 
 ## Running
 ```
