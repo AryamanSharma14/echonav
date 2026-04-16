@@ -104,9 +104,10 @@ def run_goal(
 
         next_screenshot = screen.capture()
 
-        # Key actions (ctrl+l, ctrl+a, enter, win…) often cause only a focus
-        # highlight — invisible at 16×16 hash resolution. Always trust them.
-        if action.get("action") == "key":
+        # Key and wait actions don't change the screen visibly — always trust them.
+        # Key: focus highlights are invisible at 16×16 hash resolution.
+        # Wait: it's a deliberate pause; no screen change is expected or required.
+        if action.get("action") in ("key", "wait"):
             had_effect = True
         else:
             had_effect = _screenshots_differ(screenshot, next_screenshot)
