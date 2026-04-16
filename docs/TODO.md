@@ -17,8 +17,8 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - [x] ✅ **T4** STT (`stt.py`) — faster-whisper, model caching — _ai_ — merged PR #9
 - [x] ✅ **T5** Listener / spacebar (`listener.py`) — _lead_
 
-## CP2 — Brain
-- [ ] ✅ **T6** Vision (`vision.py`) — Groq primary, Gemini fallback — _ai_ — stub in place, branch pending
+## CP2 — Brain ✅
+- [x] ✅ **T6** Vision (`vision.py`) — Groq primary, Gemini fallback — _ai_ — merged PR #10
 - [x] ✅ **T7** Executor (`executor.py`) — _lead_
 - [x] ✅ **T8** Special voice commands (`commands.py`) — _lead_
 
@@ -27,20 +27,23 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - [x] ✅ **T10** `main.py` wiring + overlay — _both_
 
 ## CP4 — Polish ✅
-- [ ] ⬜ **T11** Windows auto-start (`setup.py`, `watchdog.py`) — _lead_ (cut — scope drop)
-- [x] ✅ **T12** Full test suite green — 50/50 passing — _lead_
+- [ ] ⬜ **T11** Windows auto-start (`setup.py`, `watchdog.py`) — cut — scope drop
+- [x] ✅ **T12** Full test suite green — 56/56 passing
 
 ## CP5 — Demo
-- [ ] ⬜ **T13** Claude Computer Use upgrade — _ai_ (cut — scope drop)
-- [ ] 🟡 **T14** End-to-end demo verification — _all_ — blocked on T6 only
+- [ ] ⬜ **T13** Claude Computer Use upgrade — cut — scope drop
+- [ ] 🟡 **T14** End-to-end demo verification — loop works, reliability tuning in progress
 
 ## Non-code track (parallel, all day)
 - [ ] ⬜ Pitch script (~90 sec spoken)
 - [ ] ⬜ Demo video (2 min, screen + narration)
 - [x] ✅ README.md with install steps, usage, architecture, config
 - [ ] ⬜ Devpost / submission form filled
-- [ ] ⬜ Accessibility bug-bash log (starts after CP2)
+- [ ] ⬜ Accessibility bug-bash log
 - [ ] ⬜ Project logo / title card
 
-## Bug list
-- _(empty)_
+## Known issues / next to fix
+- Vision model sometimes tries to click Windows search result instead of typing URL directly — system prompt updated, needs verification
+- Address bar click coordinates are approximate (model picks them visually) — using Ctrl+L hotkey would be more reliable
+- `pyautogui.write()` types character-by-character and can be slow for long strings — consider `pyautogui.hotkey('ctrl','a') + write()` for address bar
+- After Brave opens from Start menu search, model sometimes clicks the Start menu result instead of pressing Enter — add `key: enter` guidance

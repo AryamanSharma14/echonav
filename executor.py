@@ -24,7 +24,11 @@ def execute(action: dict, scale_x: float = 1.0, scale_y: float = 1.0) -> None:
         pyautogui.write(action["text"], interval=0.05)
 
     elif act == "key":
-        pyautogui.press(action["key"])
+        key = action["key"]
+        if "+" in key:   # combo e.g. "ctrl+l", "ctrl+a"
+            pyautogui.hotkey(*key.split("+"))
+        else:
+            pyautogui.press(key)
 
     elif act == "scroll":
         direction = action.get("direction", "down")

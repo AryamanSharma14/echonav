@@ -14,6 +14,41 @@ Format:
 
 <!-- New entries go here -->
 
+## 2026-04-16 12:00 — lead — master (end-to-end testing + 8 bug fixes)
+- Done: Full live testing of the pipeline. Found and fixed 8 bugs. 56/56 tests green. System now runs end-to-end — Brave opens, navigates to URLs, stop command cancels mid-task.
+- Next: T14 reliability tuning. The loop works but needs demo-quality polish. See bug list in TODO.md. Priority: make address bar navigation bulletproof (use Ctrl+L instead of clicking). Then record demo video.
+- Notes (READ ALL OF THESE — critical for next session):
+
+  **Bug 1 — GROQ_API_KEY not loaded (FIXED)**
+  `config.py` now calls `load_dotenv()` at import time via `python-dotenv`. Added to `requirements.txt`. Without this, every vision call failed silently.
+
+  **Bug 2 — echonav venv missing all packages (FIXED)**
+  The local `venv/` didn't have groq, PIL, etc. Fixed by adding a `.pth` file at `venv/Lib/site-packages/navigator.pth` pointing to the navigator venv's site-packages. Both venvs now share packages.
+
+  **Bug 3 — Vision model typed goal text verbatim (FIXED)**
+  Model was typing "open Brave" into Windows search instead of just "brave". Fixed by rewriting the system prompt in `vision.py` with explicit Windows-specific rules: type only the app name, navigate via URL bar directly, never search-then-click.
+
+  **Bug 4 — Two agent threads ran in parallel (FIXED)**
+  `main.py` now has `_goal_lock = threading.Lock()`. If a goal is already running, new utterances get "Still working on the previous task. Please wait." Lock is released in a `finally` block so it's always cleaned up.
+
+  **Bug 5 — TTS calls overlapped between threads (FIXED)**
+  `tts.speak()` now acquires `_speak_lock` before speaking. Calls from different threads queue up instead of playing simultaneously.
+
+  **Bug 6 — "stop" command didn't cancel running agent (FIXED)**
+  `agent.py` has a module-level `_cancel_event = threading.Event()` and a `cancel()` function. `commands._stop()` now calls `agent.cancel()` before raising `StopCommand`. The agent checks `_cancel_event` at the start of every step.
+
+  **Bug 7 — Click loop not detected when coords were slightly different (FIXED)**
+  Loop detection in `agent.py` is now fuzzy for clicks: if 3 consecutive clicks are all within 20px of each other, agent says "I seem to be stuck" and stops. Previously only exact-match was checked.
+
+  **Bug 8 — DPI scaling: click coordinates 1.5x off (FIXED)**
+  Screenshot is captured at 1280x720 (physical resized), but pyautogui uses 1920x1080 (logical). `agent._compute_scale()` computes `scale_x = pyautogui_width / screenshot_width` at goal start (= 1.5 on this machine). `executor.execute()` now takes `scale_x, scale_y` and multiplies click coords before calling pyautogui.
+
+  **Remaining issue — address bar click is fragile**
+  Model visually estimates the address bar position (e.g. x=440, y=70 in screenshot space). This works sometimes but misses when Brave isn't maximised. Recommended fix: use `pyautogui.hotkey('ctrl', 'l')` to focus address bar instead of clicking. Add this to the system prompt and/or teach the model to use Ctrl+L.
+
+  **Remaining issue — Start menu: Enter vs click**
+  After Win key → typing "brave", model sometimes tries to click the search result visually instead of just pressing Enter. Should always press Enter after typing in Windows search.
+
 ## 2026-04-16 10:30 — lead — master (T2 + T4 merged, 50/50 tests)
 - Done: Pulled Jai's task-2-screen (screen.py — mss + Pillow JPEG, 3 tests) and task-4-stt (stt.py — faster-whisper int8 CPU, 4 tests). Created PRs #8 and #9, squash-merged both to master. Full suite now 50/50. overlay.py + demo.py already on master from previous session.
 - Next: Waiting on Jai — T6 (vision.py). Once that lands, T14 end-to-end demo is unblocked. Non-code track: pitch script, demo video, Devpost form.
