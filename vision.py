@@ -15,6 +15,7 @@ Rules:
 - When filling forms, handle one field at a time
 - When the goal is fully complete, use the "done" action
 - NEVER type the goal phrase verbatim — type only the actual search term or value needed
+- There is a small dark floating capsule labeled "EchoNav" centered on the screen. This is the assistant's own status display — NEVER click on it or interact with it. Ignore it completely.
 
 Windows-specific guidance:
 - To open an app (e.g. Brave, Chrome, Notepad): press the Win key, then type ONLY the app name (e.g. "brave"), then press Enter. Do NOT type "open brave" — just "brave".
@@ -51,8 +52,13 @@ def _build_user_message(goal: str, history: list) -> str:
     recent = history[-10:]
     history_str = ""
     if recent:
-        steps = "\n".join(f"- {h.get('action')}: {h.get('narration', '')}" for h in recent)
-        history_str = f"\nActions taken so far:\n{steps}"
+        steps = []
+        for h in recent:
+            line = f"- {h.get('action')}: {h.get('narration', '')}"
+            if not h.get("had_effect", True):
+                line += "  ⚠ NO SCREEN CHANGE DETECTED — this action had no visible effect, try a different approach"
+            steps.append(line)
+        history_str = f"\nActions taken so far:\n" + "\n".join(steps)
     return f"Goal: {goal}{history_str}\n\nWhat is the single next action?"
 
 

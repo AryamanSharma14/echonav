@@ -6,6 +6,7 @@ pyautogui
 pynput
 edge-tts
 pyttsx3
+mutagen
 groq
 google-genai
 anthropic
