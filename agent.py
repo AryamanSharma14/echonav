@@ -1,5 +1,8 @@
+import io
 import threading
 import queue
+import pyautogui
+from PIL import Image
 import screen
 import tts
 import vision
@@ -27,6 +30,11 @@ def run_goal(
     history: list = []
     repeat_count = 0
     last_click_xy = None
+
+    # Compute coordinate scale once: screenshot pixels → pyautogui logical pixels
+    _probe = screen.capture()
+    scale_x, scale_y = _compute_scale(_probe)
+    del _probe
 
     for _step in range(config.MAX_STEPS):
         if _cancel_event.is_set():
@@ -77,10 +85,20 @@ def run_goal(
         else:
             tts.speak(narration)
 
-        executor.execute(action)
+        executor.execute(action, scale_x=scale_x, scale_y=scale_y)
         history.append(action)
 
     tts.speak("I wasn't able to complete that. Would you like me to try a different approach?")
+
+
+def _compute_scale(screenshot_bytes: bytes) -> tuple:
+    """Return (scale_x, scale_y) to map screenshot pixel coords → pyautogui logical coords."""
+    img = Image.open(io.BytesIO(screenshot_bytes))
+    screen_w, screen_h = pyautogui.size()
+    scale_x = screen_w / img.width
+    scale_y = screen_h / img.height
+    print(f"[agent] coord scale: {img.width}x{img.height} screenshot → {screen_w}x{screen_h} logical ({scale_x:.2f}x)")
+    return scale_x, scale_y
 
 
 def _get_action_with_retries(screenshot: bytes, goal: str, history: list):

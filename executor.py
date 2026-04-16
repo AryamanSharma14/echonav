@@ -6,12 +6,19 @@ pyautogui.FAILSAFE = True   # Moving mouse to top-left corner aborts
 pyautogui.PAUSE = config.ACTION_DELAY
 
 
-def execute(action: dict) -> None:
-    """Execute a single action returned by the vision module."""
+def execute(action: dict, scale_x: float = 1.0, scale_y: float = 1.0) -> None:
+    """Execute a single action returned by the vision module.
+
+    scale_x / scale_y convert from screenshot pixel space to pyautogui logical
+    pixel space (accounts for DPI scaling + screenshot resize).
+    """
     act = action.get("action")
 
     if act == "click":
-        pyautogui.click(action["x"], action["y"])
+        x = int(action["x"] * scale_x)
+        y = int(action["y"] * scale_y)
+        print(f"[executor] click raw=({action['x']},{action['y']}) scaled=({x},{y})")
+        pyautogui.click(x, y)
 
     elif act == "type":
         pyautogui.write(action["text"], interval=0.05)
