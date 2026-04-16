@@ -8,7 +8,7 @@ import agent
 def no_scale(mocker):
     """Patch helpers that require real image bytes or real timing."""
     mocker.patch("agent._compute_scale", return_value=(1.0, 1.0, 1280, 800))
-    mocker.patch("agent._wait_for_action")          # skip sleep delays
+    mocker.patch("agent._wait_for_action", return_value=False)  # not cancelled, skip sleep
     mocker.patch("agent._screenshots_differ", return_value=True)  # assume actions work
 
 
