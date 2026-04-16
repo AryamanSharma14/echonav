@@ -17,6 +17,8 @@ def run_goal(
     Loops up to MAX_STEPS times: capture → AI → narrate → confirm (if major) → execute.
     """
     history: list = []
+    repeat_count = 0
+    last_action_key = None
 
     for _step in range(config.MAX_STEPS):
         screenshot = screen.capture()
@@ -30,6 +32,17 @@ def run_goal(
         if action["action"] == "done":
             tts.speak(action.get("message", "Task complete."))
             return
+
+        # Loop detection: if same action repeats 3 times, give up
+        action_key = (action.get("action"), action.get("x"), action.get("y"), action.get("text"), action.get("key"))
+        if action_key == last_action_key:
+            repeat_count += 1
+            if repeat_count >= 3:
+                tts.speak("I seem to be stuck. Please try rephrasing your command.")
+                return
+        else:
+            repeat_count = 0
+            last_action_key = action_key
 
         narration = action.get("narration", "Taking action.")
 
