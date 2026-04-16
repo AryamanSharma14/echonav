@@ -49,4 +49,5 @@ Legend: ⬜ todo · 🟡 in progress · ✅ done · ❌ blocked
 - ✅ python-dotenv missing on fresh venv — `pip install python-dotenv` (already in requirements.txt, install if missing)
 - ⬜ Vision model sometimes clicks Windows search result instead of pressing Enter — system prompt updated, needs live verification
 - ⬜ Address bar: Ctrl+L in system prompt but fragile if browser not focused — needs live verification
+- ✅ Wait action triggered false "no screen change" → AI re-ran previous step — fixed in `agent.py` (wait always trusted)
 - ⬜ `pyautogui.write()` slow for long strings — low priority for demo

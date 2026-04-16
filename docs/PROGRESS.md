@@ -14,6 +14,14 @@ Format:
 
 <!-- New entries go here -->
 
+## 2026-04-16 15:30 — ai — master (bug fix: wait action false negative)
+- Done: Fixed Bug 12 — wait actions incorrectly got `had_effect=False`, causing the AI to re-run the previous step. 56/56 tests green.
+- Next: T14 live verification — retest open-brave + navigate-to-URL flow. Ctrl+L reliability still needs live confirmation.
+- Notes:
+
+  **Bug 12 — Wait action triggers false "no screen change" (FIXED)**
+  `wait` action fell into the `_screenshots_differ()` path and got `had_effect=False` because the screen naturally doesn't change during a pause. The AI then saw the `⚠ NO SCREEN CHANGE` warning and concluded the previous action (e.g. open Brave) failed, so it retried. Fix: exempted `wait` from screen-change detection alongside `key` actions — both are always trusted.
+
 ## 2026-04-16 14:00 — ai — master (3 bug fixes + post-action verification)
 - Done: Live-tested on Jai's machine (2880×1800, 2.25× DPI). Fixed 3 bugs, added post-action screen verification. 56/56 tests still green.
 - Next: T14 live reliability testing — need to verify Ctrl+L and Enter-after-search hold up across multiple demo scenarios. Then demo video.
