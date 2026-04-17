@@ -112,10 +112,11 @@ class Overlay:
         return sw, sh
 
     def _setup_capsule(self, sw: int, sh: int) -> None:
-        """Create the centered glass-pill Toplevel child."""
+        """Create the bottom-anchored glass-pill Toplevel child."""
         W, H = 580, 82
+        BOTTOM_MARGIN = 60
         x = (sw - W) // 2
-        y = (sh - H) // 2
+        y = sh - H - BOTTOM_MARGIN
 
         win = tk.Toplevel(self._root)
         self._capsule_win = win

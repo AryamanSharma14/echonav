@@ -35,7 +35,7 @@ class App:
         )
 
     def run(self) -> None:
-        tts.speak("EchoNav ready. Hold spacebar and speak your task.")
+        tts.speak("EchoNav ready. Hold the tilde key and speak your task.")
         self._listener.start()
         if self._overlay:
             self._overlay.run()   # blocks — tkinter mainloop in main thread

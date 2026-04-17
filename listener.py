@@ -5,16 +5,17 @@ import winsound
 from pynput import keyboard
 
 SAMPLE_RATE = 16000
+_TRIGGER_KEY = keyboard.KeyCode.from_char('`')   # backtick/tilde — same physical key
 
 
 class Listener:
-    """Detects spacebar hold, records audio, calls on_utterance when released."""
+    """Detects tilde-key hold, records audio, calls on_utterance when released."""
 
     def __init__(self, on_utterance, on_start=None):
         """
         on_utterance: callable(audio: np.ndarray, sample_rate: int)
-            Called in a background thread when the user releases spacebar.
-        on_start: optional callable() — called when recording begins (spacebar pressed).
+            Called in a background thread when the user releases the tilde key.
+        on_start: optional callable() — called when recording begins (tilde pressed).
         """
         self._on_utterance = on_utterance
         self._on_start = on_start
@@ -29,7 +30,7 @@ class Listener:
         return kb
 
     def _on_press(self, key) -> None:
-        if key == keyboard.Key.space and not self._recording:
+        if key == _TRIGGER_KEY and not self._recording:
             self._recording = True
             self._audio_chunks = []
             winsound.Beep(880, 80)  # high beep = start recording
@@ -44,7 +45,7 @@ class Listener:
             self._stream.start()
 
     def _on_release(self, key) -> None:
-        if key == keyboard.Key.space and self._recording:
+        if key == _TRIGGER_KEY and self._recording:
             self._recording = False
             winsound.Beep(440, 80)  # low beep = stop recording
             if self._stream:
