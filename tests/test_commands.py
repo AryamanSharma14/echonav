@@ -13,6 +13,14 @@ def test_check_command_where_am_i_returns_true(mocker):
     mocker.patch("commands._where_am_i")
     assert commands.check_command("where am i") is True
 
+def test_check_command_describe_screen_variants(mocker):
+    desc = mocker.patch("commands._describe_screen")
+    assert commands.check_command("what is on screen") is True
+    assert commands.check_command("what's on the screen") is True
+    assert commands.check_command("describe the screen") is True
+    assert commands.check_command("tell me what you see") is True
+    assert desc.call_count == 4
+
 def test_check_command_go_back_returns_true(mocker):
     mocker.patch("commands._go_back")
     assert commands.check_command("go back") is True

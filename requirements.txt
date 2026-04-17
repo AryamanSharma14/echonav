@@ -10,6 +10,7 @@ mutagen
 groq
 google-genai
 anthropic
+uiautomation
 sounddevice
 soundfile
 numpy

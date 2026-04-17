@@ -16,6 +16,17 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 # Groq vision model — free tier, fast
 GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 
+# Gemini — 2.5-flash gets "high demand / 503" spikes on the free tier.
+# "flash-latest" alias tracks the current stable release and is rarely overloaded;
+# the "-lite" variants sit on less-contended capacity and make a great first-try.
+# If a model returns 503 / 404 / UNAVAILABLE, vision.py walks through this list.
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+GEMINI_FALLBACK_MODELS = [
+    "gemini-2.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash",
+]
+
 # ---------------------------------------------------------------------------
 # Speech-to-text
 # ---------------------------------------------------------------------------
@@ -38,8 +49,17 @@ ACTION_DELAY = 0.3               # seconds pause after each pyautogui action
 # ---------------------------------------------------------------------------
 # Screenshot
 # ---------------------------------------------------------------------------
-SCREENSHOT_QUALITY = 70          # JPEG compression quality (0–100)
-SCREENSHOT_MAX_WIDTH = 1280      # downscale if screen is wider than this
+SCREENSHOT_QUALITY = 85          # JPEG compression quality (0–100)
+SCREENSHOT_MAX_WIDTH = 1600      # downscale if screen is wider than this
+
+# ---------------------------------------------------------------------------
+# UI Automation (Set-of-Mark clicking)
+# Snapshot the foreground window's accessibility tree each step and draw
+# numbered boxes on the screenshot so the model clicks by element ID instead
+# of guessing pixel coordinates.
+# ---------------------------------------------------------------------------
+USE_UIA = True                   # master switch; False → revert to pixel-only clicks
+MAX_UI_ELEMENTS = 60             # cap elements per frame to keep prompt/image small
 
 # ---------------------------------------------------------------------------
 # Confirmation triggers

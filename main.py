@@ -11,6 +11,21 @@ Overlay (optional): always-on-top status strip shown to sighted users / judges.
   Runs in the main thread (tkinter requirement). App logic runs in background threads.
 """
 
+import sys
+
+if sys.platform == "win32":
+    # Must run before pyautogui/mss are imported so every library sees the
+    # same coordinate system. Without this, pyautogui.click() and mss screen
+    # grabs disagree on DPI-scaled monitors and clicks land in the wrong place.
+    import ctypes
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)   # PER_MONITOR_AWARE_V2
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
+
 import queue
 import threading
 

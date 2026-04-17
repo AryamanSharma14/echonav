@@ -40,3 +40,43 @@ def test_get_next_action_groq(mocker):
     mocker.patch("vision.config.MODEL_PROVIDER", "groq")
     result = vision.get_next_action(b"fake_image", "open gmail", [])
     assert result == fake_action
+
+
+def test_build_user_message_lists_elements():
+    """When UIA elements are supplied, the prompt must list them as numbered lines
+    so the model can click by ID."""
+    from ui_tree import Element
+    els = [
+        Element(id=1, name="Search Amazon", control_type="EditControl",
+                left=0, top=0, right=100, bottom=30),
+        Element(id=2, name="", control_type="ButtonControl",
+                left=0, top=0, right=50, bottom=50),
+    ]
+    msg = vision._build_user_message("search amazon", [], elements=els)
+    assert "[1] Edit: Search Amazon" in msg
+    assert "[2] Button" in msg
+    assert "click these by id" in msg.lower()
+
+
+def test_build_user_message_no_elements_falls_back():
+    msg = vision._build_user_message("goal", [], elements=[])
+    assert "none available" in msg.lower()
+    assert "keyboard" in msg.lower()
+
+
+def test_build_user_message_shows_valid_id_range():
+    from ui_tree import Element
+    els = [
+        Element(id=i, name=f"btn{i}", control_type="ButtonControl",
+                left=0, top=0, right=10, bottom=10)
+        for i in range(1, 6)
+    ]
+    msg = vision._build_user_message("goal", [], elements=els)
+    assert "1..5" in msg
+
+
+def test_parse_response_click_by_element():
+    raw = '{"action":"click","element":7,"narration":"Clicking search"}'
+    result = vision._parse_response(raw)
+    assert result["action"] == "click"
+    assert result["element"] == 7

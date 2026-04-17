@@ -60,6 +60,19 @@ def _where_am_i() -> None:
     tts.speak(response)
 
 
+def _describe_screen() -> None:
+    import screen
+    screenshot_bytes = screen.capture()
+    response = _ask_vision(
+        screenshot_bytes,
+        "Describe what is on this computer screen for a blind user in 2-3 natural sentences. "
+        "Say which app or website is open, summarise the main visible content, and mention "
+        "one or two things they could interact with next. Speak directly to the user and "
+        "keep it conversational."
+    )
+    tts.speak(response)
+
+
 def _go_back() -> None:
     pyautogui.hotkey("alt", "left")
     tts.speak("Going back.")
@@ -157,6 +170,15 @@ _COMMANDS = {
     "read page": "_read_page",
     "what can i do here": "_list_options",
     "what can i do": "_list_options",
+    "what is on the screen": "_describe_screen",
+    "what is on screen": "_describe_screen",
+    "what's on the screen": "_describe_screen",
+    "what's on screen": "_describe_screen",
+    "whats on the screen": "_describe_screen",
+    "whats on screen": "_describe_screen",
+    "describe the screen": "_describe_screen",
+    "describe screen": "_describe_screen",
+    "tell me what you see": "_describe_screen",
     "where am i": "_where_am_i",
     "go back": "_go_back",
     "stop": "_stop",

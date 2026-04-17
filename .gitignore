@@ -36,3 +36,5 @@ Thumbs.db
 
 *.pdf
 *.pptx
+# Local scratch
+.superpowers/
