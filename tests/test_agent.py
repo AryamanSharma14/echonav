@@ -10,6 +10,13 @@ def no_scale(mocker):
     mocker.patch("agent._compute_scale", return_value=(1.0, 1.0, 1280, 800))
     mocker.patch("agent._wait_for_action", return_value=False)  # not cancelled, skip sleep
     mocker.patch("agent._screenshots_differ", return_value=True)  # assume actions work
+    # Distinct hashes per call so the cached-vision skip never triggers in tests
+    _counter = {"n": 0}
+    def _fake_hash(_b):
+        _counter["n"] += 1
+        return f"hash-{_counter['n']}"
+    mocker.patch("agent._screenshot_hash", side_effect=_fake_hash)
+    mocker.patch("agent.tts.speak_nonblocking")
 
 
 def make_queues():

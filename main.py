@@ -78,6 +78,9 @@ class App:
         if self._overlay:
             self._overlay.update("acting", f'"{text}"')
 
+        # --- Echo what was heard so the blind user knows it was understood ---
+        tts.speak_nonblocking(text)
+
         # --- Special commands (stop, go back, read page, …) ---
         try:
             if commands.check_command(text):

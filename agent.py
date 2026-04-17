@@ -31,12 +31,14 @@ def run_goal(
     history: list = []
     repeat_count = 0
     last_click_xy = None
-    failed_clicks = 0  # track consecutive failed clicks
+    last_key = None
+    key_repeat_count = 0
+    failed_clicks = 0
+    last_vision_hash: str | None = None
+    consecutive_waits = 0
 
-    # Compute coordinate scale once: screenshot pixels → pyautogui logical pixels
     _probe = screen.capture()
     scale_x, scale_y, ss_w, ss_h = _compute_scale(_probe)
-    # Use the probe as the first screenshot so we don't double-capture
     screenshot = _probe
 
     for _step in range(config.MAX_STEPS):
@@ -44,11 +46,23 @@ def run_goal(
             tts.speak("Task cancelled.")
             return
 
-        action = _get_action_with_retries(screenshot, goal, history)
-        if action is None:
-            return  # Error already spoken
+        # Skip a vision call when the screen hasn't changed since last analysis.
+        # Wait up to 3 s for the UI to settle before burning another API call.
+        if last_vision_hash is not None:
+            current_hash = _screenshot_hash(screenshot)
+            if current_hash == last_vision_hash:
+                for _ in range(2):
+                    if _cancel_event.wait(timeout=1.5):
+                        return
+                    screenshot = screen.capture()
+                    if _screenshot_hash(screenshot) != last_vision_hash:
+                        break
 
-        # Validate and normalise click coordinates before anything else
+        action = _get_action_with_retries(screenshot, goal, history)
+        last_vision_hash = _screenshot_hash(screenshot)
+        if action is None:
+            return
+
         action = _validate_action(action, ss_w, ss_h)
         if action is None:
             history.append({"action": "click", "narration": "skipped — invalid coordinates", "had_effect": False})
@@ -61,24 +75,67 @@ def run_goal(
             tts.speak(action.get("message", "Task complete."))
             return
 
-        # Loop detection: fuzzy for clicks (within 20px), exact for other actions
+        # Loop detection: fuzzy for clicks (within 20 px), exact for repeated keys
         if action.get("action") == "click":
             x, y = action.get("x", 0), action.get("y", 0)
             if last_click_xy and abs(x - last_click_xy[0]) < 20 and abs(y - last_click_xy[1]) < 20:
                 repeat_count += 1
                 if repeat_count >= 3:
-                    tts.speak("I seem to be stuck clicking the same spot. Please try rephrasing.")
+                    tts.speak("I'm stuck. What would you like me to do?")
                     return
             else:
                 repeat_count = 0
                 last_click_xy = (x, y)
+            last_key = None
+            key_repeat_count = 0
+        elif action.get("action") == "key":
+            key = action.get("key", "")
+            if key == last_key:
+                key_repeat_count += 1
+                if key_repeat_count >= 3:
+                    tts.speak("I'm stuck. What would you like me to do?")
+                    return
+            else:
+                last_key = key
+                key_repeat_count = 0
+            last_click_xy = None
         else:
             last_click_xy = None
-            repeat_count = 0
+            last_key = None
+            key_repeat_count = 0
 
         narration = action.get("narration", "Taking action.")
 
+        # Cap consecutive waits — if the AI keeps waiting, force it to proceed.
+        if action.get("action") == "wait":
+            consecutive_waits += 1
+            if consecutive_waits >= 2:
+                tts.speak_nonblocking("Looks like it loaded, moving on.")
+                history.append({
+                    "action": "wait",
+                    "narration": (
+                        "SYSTEM OVERRIDE: page is considered loaded. "
+                        "DO NOT return 'wait' again. Immediately proceed with the next step of the goal."
+                    ),
+                    "had_effect": True,
+                })
+                screenshot = screen.capture()
+                last_vision_hash = None
+                consecutive_waits = 9999
+                continue
+            if consecutive_waits == 1:
+                tts.speak_nonblocking(narration)
+            executor.execute(action, scale_x=scale_x, scale_y=scale_y)
+            if _wait_for_action(action):
+                return
+            screenshot = screen.capture()
+            history.append({**action, "had_effect": True})
+            continue
+        else:
+            consecutive_waits = 0
+
         if _is_major_action(action):
+            # Confirmation must be heard before execution — keep blocking TTS.
             tts.speak(f"{narration}. Say yes to confirm, or no to cancel.")
             waiting_for_confirmation.set()
             try:
@@ -91,27 +148,27 @@ def run_goal(
             if not confirmed:
                 tts.speak("Okay, what would you like to do instead?")
                 return
+
+            if _cancel_event.is_set():
+                return
+            executor.execute(action, scale_x=scale_x, scale_y=scale_y)
         else:
-            tts.speak(narration)
+            # Speak while executing — saves ~0.5–1 s per step.
+            tts.speak_nonblocking(narration)
+            if _cancel_event.is_set():
+                return
+            executor.execute(action, scale_x=scale_x, scale_y=scale_y)
 
-        # TTS blocks for the full utterance — re-check cancel before acting
-        if _cancel_event.is_set():
-            return
-
-        executor.execute(action, scale_x=scale_x, scale_y=scale_y)
-
-        # Interruptible wait — returns immediately if stop is called mid-sleep
         if _wait_for_action(action):
             return
 
         next_screenshot = screen.capture()
 
-        # Key and wait actions don't change the screen visibly — always trust them.
-        # Key: focus highlights are invisible at 16×16 hash resolution.
-        # Wait: it's a deliberate pause; no screen change is expected or required.
+        # Key and wait actions don't always change the 16×16 perceptual hash —
+        # trust them so we don't falsely retry.
         if action.get("action") in ("key", "wait"):
             had_effect = True
-            failed_clicks = 0  # reset failure counter for non-click actions
+            failed_clicks = 0
         else:
             had_effect = _screenshots_differ(screenshot, next_screenshot)
             if not had_effect:
@@ -119,10 +176,10 @@ def run_goal(
                 if action.get("action") == "click":
                     failed_clicks += 1
                     if failed_clicks >= 3:
-                        tts.speak("I can't seem to interact with that button. Let me try a different approach.")
+                        tts.speak("I can't interact with that element. Please try rephrasing.")
                         return
             else:
-                failed_clicks = 0  # reset on successful action
+                failed_clicks = 0
 
         history.append({**action, "had_effect": had_effect})
         screenshot = next_screenshot
@@ -141,21 +198,12 @@ def _compute_scale(screenshot_bytes: bytes) -> tuple:
 
 
 def _validate_action(action: dict, ss_w: int, ss_h: int):
-    """
-    Validate and fix click coordinates from the AI.
-
-    The AI occasionally returns:
-    - Normalised ratios (e.g. 0.308, 0.185) instead of pixel coords
-    - Out-of-bounds coords (e.g. negative, or larger than the screenshot)
-
-    Returns a corrected action dict, or None if the action should be skipped.
-    """
+    """Validate and fix click coordinates from the AI."""
     if action.get("action") != "click":
         return action
 
     x, y = action.get("x", 0), action.get("y", 0)
 
-    # Detect normalised coords: both values between 0.0 and 1.0
     if isinstance(x, float) and isinstance(y, float) and 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
         x = int(x * ss_w)
         y = int(y * ss_h)
@@ -164,7 +212,6 @@ def _validate_action(action: dict, ss_w: int, ss_h: int):
 
     x, y = int(x), int(y)
 
-    # Bounds check
     if x < 0 or y < 0 or x > ss_w or y > ss_h:
         print(f"[agent] out-of-bounds coords ({x}, {y}) for {ss_w}x{ss_h} screenshot — skipping")
         return None
@@ -173,10 +220,18 @@ def _validate_action(action: dict, ss_w: int, ss_h: int):
 
 
 def _get_action_with_retries(screenshot: bytes, goal: str, history: list):
+    """Wraps vision.get_next_action with retry + a 2.5 s heartbeat message."""
     for attempt in range(config.MAX_RETRIES):
+        heartbeat = threading.Timer(
+            2.5, lambda: tts.speak_nonblocking("Working on it...")
+        )
+        heartbeat.start()
         try:
-            return vision.get_next_action(screenshot, goal, history)
+            result = vision.get_next_action(screenshot, goal, history)
+            heartbeat.cancel()
+            return result
         except Exception as e:
+            heartbeat.cancel()
             print(f"[agent] vision error (attempt {attempt + 1}): {e}")
             if attempt == config.MAX_RETRIES - 1:
                 tts.speak("I ran into a technical problem. Please try again.")
@@ -201,12 +256,11 @@ def _wait_for_action(action: dict) -> bool:
     """
     act = action.get("action")
     if act == "wait":
-        # executor already slept 1.5s; just check cancel state
         return _cancel_event.is_set()
     elif act == "key" and action.get("key") in ("enter", "win"):
-        return _cancel_event.wait(timeout=1.5)   # app launch / form submit
+        return _cancel_event.wait(timeout=1.5)
     else:
-        return _cancel_event.wait(timeout=0.6)   # standard UI response
+        return _cancel_event.wait(timeout=0.6)
 
 
 def _screenshot_hash(screenshot_bytes: bytes) -> str:
@@ -217,5 +271,4 @@ def _screenshot_hash(screenshot_bytes: bytes) -> str:
 
 
 def _screenshots_differ(before: bytes, after: bytes) -> bool:
-    """Return True if the screen visibly changed between the two captures."""
     return _screenshot_hash(before) != _screenshot_hash(after)
