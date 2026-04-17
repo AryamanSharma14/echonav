@@ -31,6 +31,7 @@ def run_goal(
     history: list = []
     repeat_count = 0
     last_click_xy = None
+    failed_clicks = 0  # track consecutive failed clicks
 
     # Compute coordinate scale once: screenshot pixels → pyautogui logical pixels
     _probe = screen.capture()
@@ -73,6 +74,7 @@ def run_goal(
                 last_click_xy = (x, y)
         else:
             last_click_xy = None
+            repeat_count = 0
 
         narration = action.get("narration", "Taking action.")
 
@@ -109,10 +111,18 @@ def run_goal(
         # Wait: it's a deliberate pause; no screen change is expected or required.
         if action.get("action") in ("key", "wait"):
             had_effect = True
+            failed_clicks = 0  # reset failure counter for non-click actions
         else:
             had_effect = _screenshots_differ(screenshot, next_screenshot)
             if not had_effect:
                 print(f"[agent] step {_step + 1}: no screen change detected after action")
+                if action.get("action") == "click":
+                    failed_clicks += 1
+                    if failed_clicks >= 3:
+                        tts.speak("I can't seem to interact with that button. Let me try a different approach.")
+                        return
+            else:
+                failed_clicks = 0  # reset on successful action
 
         history.append({**action, "had_effect": had_effect})
         screenshot = next_screenshot
