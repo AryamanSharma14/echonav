@@ -89,16 +89,24 @@ class App:
                 self._overlay.update("idle")
             return
 
+        self.handle_text(text)
+
+    def handle_text(self, text: str) -> None:
+        """Process a text instruction directly (from voice or mock input)."""
+        clean_text = text.strip()
+        if not clean_text:
+            return
+
         # --- Show goal in overlay ---
         if self._overlay:
-            self._overlay.update("acting", f'"{text}"')
+            self._overlay.update("acting", f'"{clean_text}"')
 
         # --- Echo what was heard so the blind user knows it was understood ---
-        tts.speak_nonblocking(text)
+        tts.speak_nonblocking(clean_text)
 
         # --- Special commands (stop, go back, read page, …) ---
         try:
-            if commands.check_command(text):
+            if commands.check_command(clean_text):
                 if self._overlay:
                     self._overlay.update("idle")
                 return
@@ -109,8 +117,6 @@ class App:
 
         # --- Regular goal → agent loop in background thread ---
         if not self._goal_lock.acquire(blocking=False):
-            # If stop was just called the agent thread may still be winding down —
-            # wait up to 3 s for it to release the lock before giving up.
             if agent._cancel_event.is_set():
                 if not self._goal_lock.acquire(blocking=True, timeout=3.0):
                     tts.speak("Still finishing the previous task. Please wait a moment.")
@@ -124,7 +130,7 @@ class App:
                 return
         threading.Thread(
             target=self._run_goal,
-            args=(text,),
+            args=(clean_text,),
             daemon=True,
         ).start()
 
@@ -141,8 +147,30 @@ class App:
 
 
 def main() -> None:
-    ov = overlay_module.Overlay()
-    App(overlay=ov).run()
+    import argparse
+    parser = argparse.ArgumentParser(description="EchoNav: Autonomous Voice Desktop Agent for Blind Users")
+    parser.add_argument("--headless", action="store_true", help="Run without graphical overlay HUD")
+    parser.add_argument("--mock", action="store_true", help="Run interactive terminal command loop without microphone")
+    args = parser.parse_args()
+
+    ov = None if args.headless else overlay_module.Overlay()
+    app = App(overlay=ov)
+
+    if args.mock:
+        print("[EchoNav] Mock mode active. Type goals or 'exit' to quit.")
+        tts.speak("EchoNav mock mode ready.")
+        while True:
+            try:
+                cmd = input("EchoNav> ").strip()
+                if not cmd or cmd.lower() in ("exit", "quit"):
+                    break
+                app.handle_text(cmd)
+            except (KeyboardInterrupt, EOFError):
+                break
+        print("[EchoNav] Exiting.")
+        return
+
+    app.run()
 
 
 if __name__ == "__main__":

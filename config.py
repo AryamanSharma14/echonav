@@ -75,3 +75,11 @@ MAJOR_ACTION_KEYWORDS = [
     "close",
     "book",
 ]
+
+# ---------------------------------------------------------------------------
+# Overlay HUD Geometry (synchronized across overlay.py and screen.py)
+# ---------------------------------------------------------------------------
+OVERLAY_WIDTH = 580
+OVERLAY_HEIGHT = 82
+OVERLAY_BOTTOM_MARGIN = 60
+

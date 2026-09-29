@@ -1,56 +1,83 @@
-"""
-EchoNav status overlay — two-layer UI:
-  1. ScreenBorder : fullscreen transparent window, 2px colored rect border only
-  2. CenterCapsule: 580x82px centered glass pill (Toplevel child of ScreenBorder)
+"""EchoNav status overlay — two-layer accessibility HUD:
 
-Thread-safe: call overlay.update() from any thread.
-Run overlay.run() from the MAIN thread — it blocks (tkinter mainloop).
+1. ScreenBorder: Fullscreen transparent window with 2px colored border indicating system state.
+   Configured with Win32 WS_EX_TRANSPARENT so mouse clicks pass through completely to underlying apps.
+2. CenterCapsule: High-contrast frosted glass status pill anchored at screen bottom.
+   Configured with Win32 WS_EX_NOACTIVATE so redrawing never steals keyboard focus.
+
+Thread-safe: call overlay.update(state, text) from any thread.
+Run overlay.run() from the main thread (blocks in tkinter mainloop).
 """
 
+from __future__ import annotations
+
+import logging
+import os
 import queue
+import sys
 import tkinter as tk
 from tkinter import font as tkfont
+from typing import Optional
+
+import config
+
+logger = logging.getLogger("echonav.overlay")
 
 _STATE_COLORS = {
-    "idle":       "#3a3f4a",   # dim gray — border always visible
-    "listening":  "#00d4f5",   # cyan
-    "thinking":   "#7c6af7",   # violet
-    "acting":     "#00d97e",   # green
-    "confirming": "#f5a623",   # amber
-    "done":       "#00d97e",   # green
-    "error":      "#e05c5c",   # muted red
+    "idle": "#3a3f4a",        # dim gray — border always visible
+    "listening": "#00d4f5",   # cyan
+    "thinking": "#7c6af7",    # violet
+    "acting": "#00d97e",      # green
+    "confirming": "#f5a623",  # amber
+    "done": "#00d97e",        # green
+    "error": "#e05c5c",       # muted red
 }
 
 _DEFAULT_TEXT = {
-    "idle":       "Ready for your next task",
-    "listening":  "Listening\u2026 tell me your next objective",
-    "thinking":   "Processing screen\u2026",
-    "acting":     "Executing action",
+    "idle": "Ready for your next task",
+    "listening": "Listening… tell me your next objective",
+    "thinking": "Processing screen…",
+    "acting": "Executing action",
     "confirming": "Say yes to confirm, or no to cancel",
-    "done":       "Task complete",
-    "error":      "Something went wrong",
+    "done": "Task complete",
+    "error": "Something went wrong",
 }
 
-_TRANSPARENT = "#020203"   # Windows renders this color as fully transparent
-_CAP_BG      = "#18191f"   # capsule window background
-_CAP_INNER   = "#1e1f28"   # capsule body fill
-_CAP_ALPHA   = 0.93
+_TRANSPARENT = "#020203"  # Windows renders this color as fully transparent
+_CAP_BG = "#18191f"       # capsule window background
+_CAP_INNER = "#1e1f28"    # capsule body fill
+_CAP_ALPHA = 0.93
 
 
-class Overlay:
-    """Public facade. Identical API to the previous single-window Overlay."""
+class NullOverlay:
+    """Headless dummy overlay for CI/testing or environments without a physical display."""
 
     def __init__(self) -> None:
         self._queue: queue.Queue = queue.Queue()
-        self._root = None
-        self._capsule_win = None
-        self._border_canvas = None
+        self._history: list = []
+
+    def update(self, state: str, text: str = "") -> None:
+        self._queue.put((state, text))
+        self._history.append((state, text))
+
+    def run(self) -> None:
+        pass
+
+
+class Overlay:
+    """Public facade managing the ambient screen border and floating status capsule."""
+
+    def __init__(self) -> None:
+        self._queue: queue.Queue = queue.Queue()
+        self._root: Optional[tk.Tk] = None
+        self._capsule_win: Optional[tk.Toplevel] = None
+        self._border_canvas: Optional[tk.Canvas] = None
         self._border_rect = None
-        self._cap_canvas = None
+        self._cap_canvas: Optional[tk.Canvas] = None
         self._cap_border = None
         self._orb = None
-        self._text_lbl = None
-        self._right_lbl = None
+        self._text_lbl: Optional[tk.Label] = None
+        self._right_lbl: Optional[tk.Label] = None
         self._current_state = "idle"
         self._pulse_up = True
         self._pulse_val = 180
@@ -61,26 +88,33 @@ class Overlay:
         self._queue.put((state, text))
 
     def run(self) -> None:
-        """
-        Blocking — must be called from the main thread.
+        """Blocking — must be called from the main thread.
+
         Starts the tkinter mainloop; polls the queue every 100 ms for updates.
         """
-        sw, sh = self._setup_border()
-        self._setup_capsule(sw, sh)
-        self._poll()
-        self._animate()
-        self._root.mainloop()
+        if os.getenv("HEADLESS", "0") == "1":
+            logger.info("HEADLESS mode set: skipping GUI overlay loop.")
+            return
+
+        try:
+            sw, sh = self._setup_border()
+            self._setup_capsule(sw, sh)
+            self._poll()
+            self._animate()
+            self._root.mainloop()
+        except Exception as exc:
+            logger.warning(f"Could not initialize Tkinter overlay ({exc}). Continuing headless.")
 
     @staticmethod
     def _right_symbol(state: str) -> str:
         return {
-            "idle":       "\u25cb",   # ○
-            "listening":  "\u25ce",   # ◎
-            "thinking":   "\u25cc",   # ◌
-            "acting":     "\u25b6",   # ▶
-            "confirming": "\u26a0",   # ⚠
-            "done":       "\u2713",   # ✓
-            "error":      "\u2717",   # ✗
+            "idle": "o",
+            "listening": "@",
+            "thinking": "*",
+            "acting": ">",
+            "confirming": "!",
+            "done": "+",
+            "error": "x",
         }.get(state, "")
 
     # ── Window setup ──────────────────────────────────────────────────
@@ -95,12 +129,24 @@ class Overlay:
         root.configure(bg=_TRANSPARENT)
         root.attributes("-transparentcolor", _TRANSPARENT)
 
-        sw = root.winfo_screenwidth()
-        sh = root.winfo_screenheight()
+        if sys.platform == "win32":
+            import ctypes
+            try:
+                sw = ctypes.windll.user32.GetSystemMetrics(0)
+                sh = ctypes.windll.user32.GetSystemMetrics(1)
+            except Exception:
+                sw = root.winfo_screenwidth()
+                sh = root.winfo_screenheight()
+        else:
+            sw = root.winfo_screenwidth()
+            sh = root.winfo_screenheight()
+
         root.geometry(f"{sw}x{sh}+0+0")
 
-        canvas = tk.Canvas(root, width=sw, height=sh,
-                           bg=_TRANSPARENT, highlightthickness=0, bd=0)
+        canvas = tk.Canvas(
+            root, width=sw, height=sh,
+            bg=_TRANSPARENT, highlightthickness=0, bd=0
+        )
         canvas.pack()
         self._border_canvas = canvas
 
@@ -109,14 +155,18 @@ class Overlay:
             3, 3, sw - 3, sh - 3,
             outline=_STATE_COLORS["idle"], width=2, fill=""
         )
+
+        # Apply Win32 WS_EX_TRANSPARENT & WS_EX_NOACTIVATE so clicks fall through and focus is preserved
+        self._apply_win32_styles(root, transparent_clickthrough=True)
         return sw, sh
 
     def _setup_capsule(self, sw: int, sh: int) -> None:
         """Create the bottom-anchored glass-pill Toplevel child."""
-        W, H = 580, 82
-        BOTTOM_MARGIN = 60
+        W = getattr(config, "OVERLAY_WIDTH", 580)
+        H = getattr(config, "OVERLAY_HEIGHT", 82)
+        bottom_margin = getattr(config, "OVERLAY_BOTTOM_MARGIN", 60)
         x = (sw - W) // 2
-        y = sh - H - BOTTOM_MARGIN
+        y = max(0, sh - H - bottom_margin)
 
         win = tk.Toplevel(self._root)
         self._capsule_win = win
@@ -126,15 +176,16 @@ class Overlay:
         win.configure(bg=_CAP_BG)
         win.geometry(f"{W}x{H}+{x}+{y}")
 
-        canvas = tk.Canvas(win, width=W, height=H,
-                           bg=_CAP_BG, highlightthickness=0, bd=0)
+        canvas = tk.Canvas(
+            win, width=W, height=H,
+            bg=_CAP_BG, highlightthickness=0, bd=0
+        )
         canvas.place(x=0, y=0)
         self._cap_canvas = canvas
 
         r = 36
         # body (dark fill)
-        _rounded_rect(canvas, 2, 2, W - 2, H - 2, r,
-                      fill=_CAP_INNER, outline="")
+        _rounded_rect(canvas, 2, 2, W - 2, H - 2, r, fill=_CAP_INNER, outline="")
         # border (state-colored outline, stored for updates)
         self._cap_border = _rounded_rect(
             canvas, 1, 1, W - 1, H - 1, r,
@@ -148,8 +199,8 @@ class Overlay:
             fill=_STATE_COLORS["idle"], outline=""
         )
 
-        main_fnt = tkfont.Font(family="Segoe UI", size=14, weight="bold")
-        orb_fnt  = tkfont.Font(family="Segoe UI Emoji", size=14, weight="bold")
+        main_fnt = tkfont.Font(family="Segoe UI", size=13, weight="bold")
+        orb_fnt = tkfont.Font(family="Segoe UI Emoji", size=14, weight="bold")
 
         self._text_lbl = tk.Label(
             win, text=_DEFAULT_TEXT["idle"],
@@ -164,6 +215,29 @@ class Overlay:
             bg=_CAP_INNER, anchor="center",
         )
         self._right_lbl.place(x=W - 58, y=0, width=52, height=H)
+
+        self._apply_win32_styles(win, transparent_clickthrough=False)
+
+    @staticmethod
+    def _apply_win32_styles(window, transparent_clickthrough: bool = False) -> None:
+        """Apply Win32 extended window styles to prevent focus stealing and enable clickthrough."""
+        if sys.platform != "win32":
+            return
+        import ctypes
+        GWL_EXSTYLE = -20
+        WS_EX_LAYERED = 0x00080000
+        WS_EX_TRANSPARENT = 0x00000020
+        WS_EX_NOACTIVATE = 0x08000000
+        try:
+            window.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(window.winfo_id()) or window.winfo_id()
+            style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_EXSTYLE)
+            new_style = style | WS_EX_LAYERED | WS_EX_NOACTIVATE
+            if transparent_clickthrough:
+                new_style |= WS_EX_TRANSPARENT
+            ctypes.windll.user32.SetWindowLongW(hwnd, GWL_EXSTYLE, new_style)
+        except Exception:
+            pass
 
     # ── Poll & apply ──────────────────────────────────────────────────
 
@@ -183,14 +257,16 @@ class Overlay:
         color = _STATE_COLORS.get(state, "#ffffff")
         label = text if text else _DEFAULT_TEXT.get(state, "")
 
-        # screen border
-        self._border_canvas.itemconfig(self._border_rect, outline=color)
-        # capsule border + orb base color
-        self._cap_canvas.itemconfig(self._cap_border, outline=color)
-        self._cap_canvas.itemconfig(self._orb, fill=color)
-        # text + right indicator
-        self._text_lbl.config(text=label, fg=color)
-        self._right_lbl.config(text=self._right_symbol(state), fg=color)
+        if self._border_canvas and self._border_rect:
+            self._border_canvas.itemconfig(self._border_rect, outline=color)
+        if self._cap_canvas and self._cap_border:
+            self._cap_canvas.itemconfig(self._cap_border, outline=color)
+        if self._cap_canvas and self._orb:
+            self._cap_canvas.itemconfig(self._orb, fill=color)
+        if self._text_lbl:
+            self._text_lbl.config(text=label, fg=color)
+        if self._right_lbl:
+            self._right_lbl.config(text=self._right_symbol(state), fg=color)
 
     # ── Animation loop ────────────────────────────────────────────────
 
@@ -208,7 +284,8 @@ class Overlay:
             elif self._pulse_val <= 80:
                 self._pulse_up = True
             base = _STATE_COLORS.get(state, "#00d4f5")
-            self._cap_canvas.itemconfig(self._orb, fill=_blend(base, self._pulse_val))
+            if self._cap_canvas and self._orb:
+                self._cap_canvas.itemconfig(self._orb, fill=_blend(base, self._pulse_val))
         else:
             self._pulse_val = 200
             self._pulse_up = True
@@ -216,9 +293,11 @@ class Overlay:
         if state in ("thinking", "acting"):
             frames = ["\u25dc", "\u25dd", "\u25de", "\u25df"]  # ◜◝◞◟
             self._spin_idx = (self._spin_idx + 1) % len(frames)
-            self._right_lbl.config(text=frames[self._spin_idx])
+            if self._right_lbl:
+                self._right_lbl.config(text=frames[self._spin_idx])
         else:
-            self._right_lbl.config(text=self._right_symbol(state))
+            if self._right_lbl:
+                self._right_lbl.config(text=self._right_symbol(state))
 
         self._root.after(80, self._animate)
 
@@ -228,12 +307,12 @@ class Overlay:
 def _rounded_rect(canvas, x1, y1, x2, y2, r, **kwargs):
     """Draw a smooth rounded rectangle polygon on canvas. Returns item id."""
     points = [
-        x1 + r, y1,   x2 - r, y1,
-        x2,     y1,   x2,     y1 + r,
-        x2,     y2 - r, x2,   y2,
-        x2 - r, y2,   x1 + r, y2,
-        x1,     y2,   x1,     y2 - r,
-        x1,     y1 + r, x1,   y1,
+        x1 + r, y1, x2 - r, y1,
+        x2, y1, x2, y1 + r,
+        x2, y2 - r, x2, y2,
+        x2 - r, y2, x1 + r, y2,
+        x1, y2, x1, y2 - r,
+        x1, y1 + r, x1, y1,
     ]
     return canvas.create_polygon(points, smooth=True, **kwargs)
 

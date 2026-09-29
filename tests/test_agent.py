@@ -251,3 +251,30 @@ def test_major_action_cancels_on_no(mocker):
     agent.run_goal("delete file", waiting, confirm_q)
 
     mock_execute.assert_not_called()
+
+
+def test_cdp_direct_navigation_fast_path(mocker):
+    mocker.patch("agent.cdp_browser.is_connected", return_value=True)
+    mock_nav = mocker.patch("agent.cdp_browser.navigate_to", return_value=True)
+    mocker.patch("agent.tts.speak")
+    mocker.patch("agent.tts.speak_nonblocking")
+    mock_vision = mocker.patch("agent.vision.get_next_action")
+
+    waiting, confirm_q = make_queues()
+    agent.run_goal("open amazon.com", waiting, confirm_q)
+
+    mock_nav.assert_called_once_with("https://amazon.com")
+    mock_vision.assert_not_called()
+
+
+def test_extract_target_url():
+    assert agent._extract_target_url("open amazon") == "https://amazon.com"
+    assert agent._extract_target_url("search youtube for laya") == "https://youtube.com/results?search_query=laya"
+    assert agent._extract_target_url("go to https://github.com") == "https://github.com"
+    assert agent._extract_target_url("open notepad") is None
+
+
+def test_is_major_action_with_laya():
+    assert agent._is_major_action({"action": "click", "narration": "Deleting database record"}) is True
+    assert agent._is_major_action({"action": "click", "narration": "Clicking regular navigation link"}) is False
+

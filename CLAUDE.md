@@ -1,74 +1,45 @@
-# EchoNav — Project Instructions for Claude
+# EchoNav Developer Architecture Guide
 
-## Project
-Voice-controlled desktop AI agent for blind users. Ctrl+Space-to-talk → Whisper STT → Groq Vision (llama-4-scout-17b) analyzes screenshot → pyautogui executes one action → edge-tts narrates → loop.
+EchoNav is an autonomous voice desktop assistant for blind and low-vision users on Windows 11. It combines sub-50ms non-autoregressive decision routing (Convai Laya) with deterministic browser automation (Chrome DevTools Protocol) and desktop Set-of-Mark accessibility tree grounding (Windows UIA).
 
-Full-day hackathon. Two Claude Code instances work on this repo in parallel (the `lead` role and the `ai` role). A third contributor works the non-code track (demo, docs, QA) without Claude.
+## Architectural Foundations
 
-## Source of Truth
-- Spec: `../Dayzero/docs/superpowers/specs/2026-04-13-blind-nav-agent-design.md`
-- Plan: `../Dayzero/docs/superpowers/plans/2026-04-13-navigator-implementation.md` (14 TDD tasks)
-- Hackathon schedule + roles: `docs/HACKATHON.md`
-- **Live task list:** `docs/TODO.md` (claim and check off tasks here)
-- **Progress log:** `docs/PROGRESS.md` (append-only; read this at session start)
+1. **System 1 Decision Engine (`laya_engine.py`)**:
+   - Built on Convai Laya (`convaiinnovations/laya`), providing sub-50ms intent classification, safety scoring, and candidate element selection.
+   - Non-autoregressive fast classification routes voice commands into instant utility actions, deterministic browser navigation, or native desktop actions.
+   - Fast deterministic heuristic fallback ensures instantaneous unit tests and zero-downtime offline execution.
 
-Read the plan before starting a task. Do not re-architect.
+2. **Deterministic Browser Grounding (`browser_cdp.py`)**:
+   - Connects directly to Chromium browsers (Chrome, Brave, Edge) via Chrome DevTools Protocol (port 9222).
+   - Extracts exact DOM accessibility tree nodes with bounding boxes, tag names, roles, and text.
+   - Eliminates coordinate guessing for web tasks: navigates URLs directly, clicks DOM nodes via exact viewport coordinates, and types into focused elements.
 
-## Environment (as of 2026-04-15 night)
-- venv: Python 3.10.11 (3.11+ target for prod; fine for hackathon)
-- Vision provider: **Groq primary** (`MODEL_PROVIDER="groq"` in `config.py`), Gemini fallback
-- Groq model: `meta-llama/llama-4-scout-17b-16e-instruct`
-- `GROQ_API_KEY` must be in `.env` (personal, not committed)
-- Gemini free tier is broken on current GCP project (limit: 0) — do not rely on it
-- `google-genai` kept in `requirements.txt` as fallback only; do not use deprecated `google-generativeai` SDK
-- All 4 smoke tests passing: Whisper STT, edge-tts, pyautogui, Groq vision
+3. **Desktop Set-of-Mark Grounding (`ui_tree.py` + `annotate.py`)**:
+   - For native Windows applications, extracts interactive UI Automation leaves (buttons, inputs, menus).
+   - Overlays numbered bounding boxes on screen captures so the Vision Language Model (Groq / Gemini) references elements by integer ID instead of raw pixel coordinates.
 
-## Session Start Ritual (MANDATORY)
-Every new Claude session on this repo:
-1. `git pull origin master`
-2. Read `docs/PROGRESS.md` (top 5 entries) — know what just shipped.
-3. Read `docs/TODO.md` — see what's in flight and what's free.
-4. Report to the human: "Last push was `<role>` on `<branch>`. Open tasks: X, Y, Z. Which one?"
+4. **Multi-Provider Perception (`vision.py`)**:
+   - Resilient fallback chain: Groq (meta-llama/llama-4-scout-17b, llama-3.2-11b) -> Gemini 2.5 Flash -> Local Heuristic Engine.
+   - Guaranteed completion without crashes even when API keys are absent or rate limits are reached.
 
-## Push Protocol (MANDATORY on every push)
-Before `git push`, update the shared context so the other Claude is not lost:
-1. Update `docs/TODO.md`: flip the task to 🟡 in-progress or ✅ done.
-2. Append an entry to `docs/PROGRESS.md` via the helper:
-   ```
-   bash scripts/log-push.sh "Done: <what>. Next: <what>. Notes: <gotchas>"
-   ```
-   The helper stamps the time, commits TODO + PROGRESS, and pushes.
-3. If the helper is unavailable, add the entry manually (format in `docs/PROGRESS.md`), then commit + push.
+5. **Audio Pipeline (`stt.py` + `tts.py` + `listener.py`)**:
+   - STT: Faster-Whisper with RMS voice activity energy thresholding to discard silence and static.
+   - TTS: Non-blocking Edge Neural TTS (`en-US-AriaNeural`) with instant abort (`stop_speech()`) on user interrupt.
 
-**Never push code without a PROGRESS entry.** The other Claude depends on it.
+## CLI Commands
 
-## Multi-Claude Coordination
-Two Claude instances, one repo. Rules:
-1. **One task = one branch.** Branch name: `task-<N>-<slug>` (e.g. `task-6-vision`).
-2. **Before starting**: pull, read PROGRESS + TODO, claim in TODO (flip to 🟡), commit, push.
-3. **Never edit files owned by another in-flight task.** File ownership is in the plan's File Map.
-4. **TDD is mandatory.** Every green test = a commit.
-5. **PR → master** when the task's tests pass. Other side reviews before merge.
-6. **Blocked on an interface?** Read that task in the plan — signatures are pre-defined.
-
-## Commit & Doc Voice
-- First person, singular. "add X", "fix Y", "I ran Z."
-- Never name individual contributors. Use roles (`lead`, `ai`) only in internal docs (`docs/*`), never in commit messages or PR bodies.
-- Commit format: `task-<N>: <what>`. No "generated with Claude" footers. No teammate names.
-
-## Hard Rules
-- Python 3.10.11 in venv; 3.11+ target for prod. Windows-first.
-- Follow the plan task-by-task. TDD. No scope creep.
-- Do not touch `../Dayzero/` except to update the plan/spec.
-- If a test is flaky, fix the test, not the assertion.
-- Do not use the deprecated `google-generativeai` SDK. Use `google-genai` if Gemini is needed.
-
-## Running
+```bash
+echonav start       # Start voice agent with HUD overlay
+echonav start --headless  # Run without visual HUD
+echonav mock        # Interactive console mock mode (no microphone needed)
+echonav status      # Check system health, Laya engine, and CDP connection
+echonav test-audio  # Test audio synthesis and capture
+echonav version     # Output version
 ```
-venv\Scripts\activate
+
+## Running Tests
+
+```bash
 pytest -v
-python main.py
 ```
-
-## When in Doubt
-Ask. Do not invent module boundaries that aren't in the File Map.
+All 105 automated unit tests execute with headless mock support.

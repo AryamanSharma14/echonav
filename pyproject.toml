@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "echonav"
+version = "2.0.0"
+description = "Autonomous voice desktop agent for blind and low-vision users on Windows"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "EchoNav Contributors" }
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Adaptive Technologies",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "faster-whisper",
+    "groq",
+    "google-genai",
+    "pyautogui",
+    "pynput",
+    "uiautomation",
+    "edge-tts",
+    "pyttsx3",
+    "mss",
+    "Pillow",
+    "numpy",
+    "sounddevice",
+    "python-dotenv",
+    "torch",
+    "transformers",
+    "laya>=0.3.0",
+]
+
+[project.scripts]
+echonav = "cli:main"
+
+[tool.setuptools]
+py-modules = [
+    "agent",
+    "annotate",
+    "browser_cdp",
+    "cli",
+    "commands",
+    "config",
+    "executor",
+    "laya_engine",
+    "listener",
+    "main",
+    "overlay",
+    "screen",
+    "stt",
+    "tts",
+    "ui_tree",
+    "vision",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]

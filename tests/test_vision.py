@@ -80,3 +80,52 @@ def test_parse_response_click_by_element():
     result = vision._parse_response(raw)
     assert result["action"] == "click"
     assert result["element"] == 7
+
+
+def test_local_heuristic_website_navigation():
+    action0 = vision._local_heuristic_action("open amazon.com", None, [])
+    assert action0["action"] == "key"
+    assert action0["key"] == "ctrl+l"
+
+    action1 = vision._local_heuristic_action("open amazon.com", None, [action0])
+    assert action1["action"] == "type"
+    assert "amazon.com" in action1["text"]
+
+
+def test_local_heuristic_site_search():
+    action0 = vision._local_heuristic_action("search youtube for laya", None, [])
+    assert action0["action"] == "key"
+    assert action0["key"] == "ctrl+l"
+
+    action1 = vision._local_heuristic_action("search youtube for laya", None, [action0])
+    assert action1["action"] == "type"
+    assert "youtube.com/results?search_query=laya" in action1["text"]
+
+
+def test_local_heuristic_app_launch():
+    action0 = vision._local_heuristic_action("open notepad", None, [])
+    assert action0["action"] == "key"
+    assert action0["key"] == "win"
+
+    action1 = vision._local_heuristic_action("open notepad", None, [action0])
+    assert action1["action"] == "type"
+    assert action1["text"] == "notepad"
+
+
+def test_local_heuristic_element_click():
+    from ui_tree import Element
+    el = Element(id=4, name="Submit Order", control_type="ButtonControl", left=10, top=10, right=50, bottom=50)
+    action = vision._local_heuristic_action("click submit", [el], [])
+    assert action["action"] == "click"
+    assert action["element"] == 4
+
+
+def test_get_next_action_fallback_to_heuristic(mocker):
+    mocker.patch("vision._groq_action", side_effect=Exception("API connection refused"))
+    mocker.patch("vision._gemini_action", side_effect=Exception("Quota exceeded"))
+    mocker.patch("vision.config.MODEL_PROVIDER", "groq")
+    mocker.patch("vision.config.GEMINI_API_KEY", "mock-key")
+
+    action = vision.get_next_action(b"fake_image", "open amazon", [])
+    assert action["action"] == "key"
+    assert action["key"] == "ctrl+l"

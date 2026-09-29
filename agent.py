@@ -11,7 +11,10 @@ import vision
 import executor
 import ui_tree
 import annotate as annotator
+import re
 import config
+from laya_engine import engine as laya_engine
+from browser_cdp import browser as cdp_browser
 
 _cancel_event = threading.Event()
 
@@ -48,6 +51,15 @@ def run_goal(
     element_repeat_count = 0
     force_no_uia = False   # one-shot reset: pass no elements to vision next call
     failed_bboxes: set[tuple[int, int, int, int]] = set()   # element bboxes that didn't respond to a click — hide them from the model until something actually works
+
+    # 1. Deterministic CDP navigation fast-path (active Chromium session)
+    if cdp_browser.is_connected():
+        target_url = _extract_target_url(goal)
+        if target_url:
+            tts.speak_nonblocking(f"Navigating to {target_url}")
+            if cdp_browser.navigate_to(target_url):
+                tts.speak(f"{target_url} loaded.")
+                return
 
     _probe = screen.capture()
     scale_x, scale_y, offset_x, offset_y, ss_w, ss_h = _compute_scale(_probe)
@@ -385,8 +397,9 @@ def _compute_scale(screenshot_bytes: bytes) -> tuple:
     monitor isn't at (0,0), e.g. a side-mounted second screen.
     """
     img = Image.open(io.BytesIO(screenshot_bytes))
-    with mss.mss() as sct:
-        m = sct.monitors[1]   # same index screen.capture uses
+    mss_cls = getattr(mss, "MSS", mss.mss)
+    with mss_cls() as sct:
+        m = sct.monitors[1] if len(sct.monitors) > 1 else sct.monitors[0]
     mon_w, mon_h = m["width"], m["height"]
     offset_x, offset_y = m["left"], m["top"]
     scale_x = mon_w / img.width
@@ -455,8 +468,50 @@ def _get_action_with_retries(
 
 
 def _is_major_action(action: dict) -> bool:
+    safety = laya_engine.evaluate_safety(action)
+    if safety.is_destructive:
+        return True
     narration = action.get("narration", "").lower()
     return any(kw in narration for kw in config.MAJOR_ACTION_KEYWORDS)
+
+
+def _extract_target_url(goal: str) -> str | None:
+    """Extract a target website URL or search URL from the voice goal."""
+    clean = goal.lower().strip()
+
+    # Direct URL with protocol: https://... or http://...
+    proto_match = re.search(r'https?://[^\s]+', clean)
+    if proto_match:
+        return proto_match.group(0)
+
+    # Search pattern: "search <site> for <query>"
+    search_match = re.search(r'\bsearch\s+([a-zA-Z0-9]+)\s+for\s+(.+)$', clean)
+    if search_match:
+        site, query = search_match.group(1), search_match.group(2).strip()
+        query_plus = query.replace(" ", "+")
+        if "amazon" in site:
+            return f"https://amazon.com/s?k={query_plus}"
+        elif "youtube" in site:
+            return f"https://youtube.com/results?search_query={query_plus}"
+        elif "google" in site:
+            return f"https://google.com/search?q={query_plus}"
+        elif "wiki" in site:
+            return f"https://en.wikipedia.org/wiki/Special:Search?search={query_plus}"
+        return f"https://{site}.com/search?q={query_plus}"
+
+    # Open pattern: "open <site>" or "go to <site>"
+    open_match = re.search(r'\b(?:open|go to|browse to|visit)\s+([a-zA-Z0-9\.\-]+(?:\.com|\.org|\.io|\.net)?)\b', clean)
+    if open_match:
+        site = open_match.group(1)
+        KNOWN_SITES = {"amazon", "youtube", "google", "gmail", "reddit", "wikipedia", "github", "twitter"}
+        if site in KNOWN_SITES or any(site.endswith(ext) for ext in (".com", ".org", ".io", ".net", ".edu", ".gov")):
+            if site == "gmail":
+                return "https://mail.google.com"
+            if not any(site.endswith(ext) for ext in (".com", ".org", ".io", ".net", ".edu", ".gov")):
+                site = f"{site}.com"
+            return site if site.startswith("http") else f"https://{site}"
+
+    return None
 
 
 def _wait_for_action(action: dict) -> bool:

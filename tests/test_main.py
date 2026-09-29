@@ -117,3 +117,19 @@ def test_handle_utterance_agent_runs_in_thread(mocker):
     # _handle_utterance should return before slow_goal finishes
     assert ready.wait(timeout=2), "agent.run_goal was never called"
     released.set()
+
+
+def test_handle_text_dispatches_directly(mocker):
+    mocker.patch("main.commands.check_command", return_value=False)
+    mock_run_goal = mocker.patch("main.agent.run_goal")
+    mocker.patch("main.tts.speak_nonblocking")
+
+    app = main.App()
+    app.handle_text("open amazon")
+
+    # Wait briefly for daemon thread to invoke run_goal
+    import time
+    time.sleep(0.1)
+    mock_run_goal.assert_called_once()
+    assert mock_run_goal.call_args[0][0] == "open amazon"
+

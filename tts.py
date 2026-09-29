@@ -1,35 +1,39 @@
-"""
-TTS — instant, non-blocking speech via a dedicated worker thread.
+"""TTS — instant speech narration via dedicated worker thread and Windows SAPI5."""
 
-A fresh pyttsx3 engine is created per utterance: the Windows SAPI5 driver
-silently stops speaking after the first runAndWait() if the engine is
-reused, so one engine per utterance is the reliable workaround. The
-per-call init is ~50 ms — still two orders of magnitude faster than the
-old edge_tts + PowerShell approach (~2–3 s).
-"""
+from __future__ import annotations
 
+import logging
 import queue
 import threading
 import pyttsx3
 import config
 
+logger = logging.getLogger("echonav.tts")
+
 _last_utterance: str = ""
 _rate: int = config.TTS_RATE
 _q: queue.Queue = queue.Queue()
+_current_engine: pyttsx3.Engine | None = None
+_engine_lock = threading.Lock()
 
 
 def _worker() -> None:
+    global _current_engine
     while True:
         text, done = _q.get()
         engine = None
         try:
             engine = pyttsx3.init()
             engine.setProperty("rate", _rate)
+            with _engine_lock:
+                _current_engine = engine
             engine.say(text)
             engine.runAndWait()
         except Exception as e:
-            print(f"[tts] pyttsx3 error: {e}")
+            logger.debug(f"pyttsx3 error: {e}")
         finally:
+            with _engine_lock:
+                _current_engine = None
             try:
                 if engine:
                     engine.stop()
@@ -63,6 +67,24 @@ def speak_last() -> None:
     """Repeat the last spoken utterance."""
     if _last_utterance:
         speak(_last_utterance)
+
+
+def stop_speech() -> None:
+    """Abort currently speaking speech immediately and drain the utterance queue."""
+    global _current_engine
+    while not _q.empty():
+        try:
+            _, done = _q.get_nowait()
+            if done is not None:
+                done.set()
+        except queue.Empty:
+            break
+    with _engine_lock:
+        if _current_engine:
+            try:
+                _current_engine.stop()
+            except Exception:
+                pass
 
 
 def set_rate(wpm: int) -> None:
