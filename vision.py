@@ -144,7 +144,12 @@ def get_next_action(
         return _local_heuristic_action(goal, elements, history)
 
     errors = []
-    if provider == "groq":
+    if provider == "ollama":
+        try:
+            return _ollama_action(screenshot_bytes, goal, history, elements)
+        except Exception as e:
+            errors.append(f"Ollama: {e}")
+    elif provider == "groq":
         try:
             return _groq_action(screenshot_bytes, goal, history, elements)
         except Exception as e:
@@ -167,7 +172,7 @@ def get_next_action(
     else:
         raise ValueError(f"Unknown MODEL_PROVIDER: {config.MODEL_PROVIDER}")
 
-    print(f"[vision] Cloud vision providers failed ({'; '.join(errors)}); using local heuristic fallback.")
+    print(f"[vision] Cloud/local vision providers failed ({'; '.join(errors)}); using local heuristic fallback.")
     return _local_heuristic_action(goal, elements, history)
 
 
@@ -367,6 +372,41 @@ def _gemini_action(
             raise   # non-retryable (auth, invalid request, etc.)
 
     raise last_err if last_err else RuntimeError("All Gemini models failed")
+
+
+def _ollama_action(
+    screenshot_bytes: bytes, goal: str, history: list, elements: list | None = None
+) -> dict:
+    """Query a local open-source vision model via Ollama (Qwen2.5-VL, MiniCPM-V, LLaMA-3.2-Vision)."""
+    import urllib.request
+    import json
+    import base64
+
+    b64_image = base64.b64encode(screenshot_bytes).decode("utf-8")
+    user_prompt = SYSTEM_PROMPT + "\n\n" + _build_user_message(goal, history, screenshot_bytes, elements)
+
+    payload = {
+        "model": getattr(config, "OLLAMA_MODEL", "qwen2.5-vl"),
+        "messages": [
+            {
+                "role": "user",
+                "content": user_prompt,
+                "images": [b64_image],
+            }
+        ],
+        "stream": False,
+        "format": "json",
+    }
+
+    base_url = getattr(config, "OLLAMA_URL", "http://localhost:11434").rstrip("/")
+    url = f"{base_url}/api/chat"
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        res = json.loads(resp.read().decode("utf-8"))
+        msg = res.get("message", {}).get("content", "{}")
+        return _parse_response(msg)
 
 
 def _local_heuristic_action(goal: str, elements: list | None, history: list) -> dict:

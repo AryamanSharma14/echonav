@@ -45,8 +45,11 @@ def cmd_status(_args: argparse.Namespace) -> None:
     groq_set = bool(getattr(config, "GROQ_API_KEY", "") or os.getenv("GROQ_API_KEY"))
     gemini_set = bool(getattr(config, "GEMINI_API_KEY", "") or os.getenv("GEMINI_API_KEY"))
     print(f"Vision Provider:   {provider.upper()}")
-    print(f"  Groq API Key:    {'Configured' if groq_set else 'Not configured'}")
-    print(f"  Gemini API Key:  {'Configured' if gemini_set else 'Not configured'}")
+    if provider == "ollama":
+        print(f"  Ollama Model:    {getattr(config, 'OLLAMA_MODEL', 'qwen2.5-vl')} ({getattr(config, 'OLLAMA_URL', 'http://localhost:11434')})")
+    else:
+        print(f"  Groq API Key:    {'Configured' if groq_set else 'Not configured'}")
+        print(f"  Gemini API Key:  {'Configured' if gemini_set else 'Not configured'}")
 
     # Audio Engine
     print(f"STT Model:         {getattr(config, 'STT_MODEL', 'base.en')}")

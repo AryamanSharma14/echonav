@@ -9,6 +9,10 @@ load_dotenv()   # loads .env from project root into os.environ
 # ---------------------------------------------------------------------------
 MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "groq")
 
+# Local open-source vision via Ollama (Qwen2.5-VL, MiniCPM-V, LLaMA-3.2-Vision)
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-vl")
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")

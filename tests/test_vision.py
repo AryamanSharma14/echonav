@@ -128,4 +128,14 @@ def test_get_next_action_fallback_to_heuristic(mocker):
 
     action = vision.get_next_action(b"fake_image", "open amazon", [])
     assert action["action"] == "key"
-    assert action["key"] == "ctrl+l"
+    assert action["key"] == "ctrl+l"
+
+
+def test_get_next_action_ollama(mocker):
+    fake_action = {"action": "click", "element": 2, "narration": "Clicking button locally"}
+    mocker.patch("vision._ollama_action", return_value=fake_action)
+    mocker.patch("vision.config.MODEL_PROVIDER", "ollama")
+
+    result = vision.get_next_action(b"fake_image", "click search", [])
+    assert result == fake_action
+
