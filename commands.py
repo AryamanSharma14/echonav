@@ -24,6 +24,29 @@ class StopCommand(Exception):
     pass
 
 
+def get_active_window_title() -> str:
+    """Get the foreground window title via Win32 ctypes or UIA."""
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        hwnd = user32.GetForegroundWindow()
+        if hwnd:
+            buf = ctypes.create_unicode_buffer(512)
+            user32.GetWindowTextW(hwnd, buf, 512)
+            if buf.value:
+                return buf.value
+    except Exception:
+        pass
+    try:
+        import uiautomation as auto
+        fg = auto.GetForegroundControl()
+        if fg and fg.Name:
+            return fg.Name
+    except Exception:
+        pass
+    return "Desktop"
+
+
 def check_command(text: str) -> bool:
     """Check if text matches a special utility command.
 
@@ -46,6 +69,19 @@ def check_command(text: str) -> bool:
         fn_name = f"_{intent.command_name}"
         if hasattr(module, fn_name):
             getattr(module, fn_name)()
+            return True
+    elif intent.category == "inquire":
+        if "where" in lower:
+            _where_am_i()
+            return True
+        elif "read" in lower:
+            _read_page()
+            return True
+        elif "option" in lower or "what can" in lower:
+            _list_options()
+            return True
+        else:
+            _describe_screen()
             return True
 
     return False
@@ -83,13 +119,20 @@ def _list_options() -> None:
 
 
 def _where_am_i() -> None:
-    # Check CDP active tab
+    # 1. Check CDP active tab
     if cdp_browser.is_connected():
         tab = cdp_browser.get_active_tab()
         if tab and tab.title:
             tts.speak(f"You are in your browser on {tab.title}.")
             return
 
+    # 2. Check active Windows foreground window (<2ms)
+    title = get_active_window_title()
+    if title and title != "Desktop":
+        tts.speak(f"You are currently in {title}.")
+        return
+
+    # 3. Vision descriptor fallback
     import screen
     screenshot_bytes = screen.capture()
     response = _ask_vision(
@@ -230,8 +273,28 @@ def _ask_vision(screenshot_bytes: bytes, prompt: str) -> str:
         except Exception as e:
             logger.debug(f"Gemini vision query failed: {e}")
 
-    # 3. Fallback descriptor
-    return "Desktop view with active applications open. Ready for your next command."
+    # 3. Try Ollama if configured
+    if getattr(config, "MODEL_PROVIDER", "") == "ollama":
+        try:
+            import urllib.request
+            import json
+            base_url = getattr(config, "OLLAMA_URL", "http://localhost:11434").rstrip("/")
+            img_b64 = base64.b64encode(screenshot_bytes).decode("utf-8")
+            payload = {
+                "model": getattr(config, "OLLAMA_MODEL", "qwen2.5-vl"),
+                "messages": [{"role": "user", "content": prompt, "images": [img_b64]}],
+                "stream": False,
+            }
+            req = urllib.request.Request(f"{base_url}/api/chat", data=json.dumps(payload).encode("utf-8"), headers={"Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                res = json.loads(resp.read().decode("utf-8"))
+                return res.get("message", {}).get("content", "").strip()
+        except Exception as e:
+            logger.debug(f"Ollama vision query failed: {e}")
+
+    # 4. Fallback descriptor using foreground window
+    title = get_active_window_title()
+    return f"You are currently viewing {title}. Ready for your next command."
 
 
 _COMMANDS = {
@@ -249,6 +312,12 @@ _COMMANDS = {
     "describe screen": "_describe_screen",
     "tell me what you see": "_describe_screen",
     "where am i": "_where_am_i",
+    "where amn i": "_where_am_i",
+    "where am": "_where_am_i",
+    "where i am": "_where_am_i",
+    "where are we": "_where_am_i",
+    "what screen is this": "_where_am_i",
+    "what app": "_where_am_i",
     "go back": "_go_back",
     "stop": "_stop",
     "cancel": "_stop",

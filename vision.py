@@ -3,6 +3,7 @@
 import base64
 import io
 import json
+import os
 import re
 
 from PIL import Image
@@ -418,6 +419,12 @@ def _local_heuristic_action(goal: str, elements: list | None, history: list) -> 
     clean_goal = goal.lower().strip()
     history_actions = [h.get("action") for h in history]
     num_steps = len(history_actions)
+
+    # 0. Inquiry queries (e.g. "where am i", "where amn i", "describe", "what screen")
+    if any(w in clean_goal for w in ("where", "describe", "what is on", "what screen", "what app")):
+        from commands import get_active_window_title
+        title = get_active_window_title()
+        return {"action": "done", "message": f"You are currently in {title}."}
 
     # 1. Direct website navigation (e.g. "open amazon", "go to youtube.com")
     KNOWN_SITES = {"amazon", "youtube", "google", "gmail", "reddit", "wikipedia", "github", "twitter", "facebook", "linkedin", "netflix"}

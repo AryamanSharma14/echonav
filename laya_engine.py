@@ -51,7 +51,7 @@ SAFETY_KEYWORDS = {
 INSTANT_COMMAND_PATTERNS = {
     "stop": ["stop", "cancel", "halt", "abort", "freeze"],
     "read_page": ["read the page", "read page", "read content", "read all text"],
-    "where_am_i": ["where am i", "what screen is this", "current app"],
+    "where_am_i": ["where am i", "where amn i", "what screen is this", "current app", "where am", "where i am", "what app", "where are we"],
     "describe_screen": ["describe the screen", "describe screen", "what is on screen", "tell me what you see"],
     "list_options": ["what can i do here", "list options", "interactive elements", "what buttons"],
     "go_back": ["go back", "previous page", "back"],
