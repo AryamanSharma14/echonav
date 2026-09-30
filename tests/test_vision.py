@@ -23,6 +23,18 @@ def test_parse_response_strips_plain_code_block():
     assert result["action"] == "type"
     assert result["text"] == "hello"
 
+def test_parse_response_extracts_from_preamble_and_suffix():
+    raw = 'Sure! Here is the JSON:\n{"action": "click", "element": 3, "narration": "Clicking"}\nHope this helps!'
+    result = vision._parse_response(raw)
+    assert result["action"] == "click"
+    assert result["element"] == 3
+
+def test_parse_response_empty_raises():
+    with pytest.raises(ValueError):
+        vision._parse_response("")
+    with pytest.raises(ValueError):
+        vision._parse_response("   \n  ")
+
 def test_build_user_message_includes_goal():
     msg = vision._build_user_message("open gmail", [])
     assert "open gmail" in msg
@@ -118,6 +130,14 @@ def test_local_heuristic_element_click():
     action = vision._local_heuristic_action("click submit", [el], [])
     assert action["action"] == "click"
     assert action["element"] == 4
+
+
+def test_local_heuristic_element_click_with_stop_words():
+    from ui_tree import Element
+    search_box = Element(id=7, name="Search", control_type="EditControl", left=100, top=20, right=300, bottom=40)
+    action = vision._local_heuristic_action("click on the search button", [search_box], [])
+    assert action["action"] == "click"
+    assert action["element"] == 7
 
 
 def test_get_next_action_fallback_to_heuristic(mocker):

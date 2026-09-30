@@ -11,7 +11,7 @@ MODEL_PROVIDER = os.getenv("MODEL_PROVIDER", "groq")
 
 # Local open-source vision via Ollama (Qwen2.5-VL, MiniCPM-V, LLaMA-3.2-Vision)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-vl")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "granite3.2-vision:2b")
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")

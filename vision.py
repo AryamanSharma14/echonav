@@ -265,14 +265,29 @@ def _build_user_message(
 
 
 def _parse_response(text: str) -> dict:
-    text = text.strip()
-    if text.startswith("```"):
-        parts = text.split("```")
-        if len(parts) > 1:
-            text = parts[1]
-        if text.startswith("json"):
-            text = text[4:]
-    return json.loads(text.strip())
+    text = (text or "").strip()
+    if not text:
+        raise ValueError("Model returned empty response text")
+
+    # 1. Extract markdown JSON block if present
+    code_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if code_match:
+        try:
+            return json.loads(code_match.group(1).strip())
+        except Exception:
+            pass
+
+    # 2. Extract outermost JSON object { ... }
+    first_brace = text.find("{")
+    last_brace = text.rfind("}")
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        candidate = text[first_brace : last_brace + 1].strip()
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass
+
+    return json.loads(text)
 
 
 def _groq_action(
@@ -378,7 +393,7 @@ def _gemini_action(
 def _ollama_action(
     screenshot_bytes: bytes, goal: str, history: list, elements: list | None = None
 ) -> dict:
-    """Query a local open-source vision model via Ollama (Qwen2.5-VL, MiniCPM-V, LLaMA-3.2-Vision)."""
+    """Query a local open-source vision model via Ollama with automatic fallback."""
     import urllib.request
     import json
     import base64
@@ -386,28 +401,47 @@ def _ollama_action(
     b64_image = base64.b64encode(screenshot_bytes).decode("utf-8")
     user_prompt = SYSTEM_PROMPT + "\n\n" + _build_user_message(goal, history, screenshot_bytes, elements)
 
-    payload = {
-        "model": getattr(config, "OLLAMA_MODEL", "qwen2.5-vl"),
-        "messages": [
-            {
-                "role": "user",
-                "content": user_prompt,
-                "images": [b64_image],
-            }
-        ],
-        "stream": False,
-        "format": "json",
-    }
+    # Prioritize user's configured model, with fallback chain across available local vision models
+    configured_model = getattr(config, "OLLAMA_MODEL", "granite3.2-vision:2b")
+    models_to_try = [configured_model]
+    for alt in ("granite3.2-vision:2b", "moondream", "qwen2.5vl:3b"):
+        if alt not in models_to_try:
+            models_to_try.append(alt)
 
     base_url = getattr(config, "OLLAMA_URL", "http://localhost:11434").rstrip("/")
     url = f"{base_url}/api/chat"
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
 
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        res = json.loads(resp.read().decode("utf-8"))
-        msg = res.get("message", {}).get("content", "{}")
-        return _parse_response(msg)
+    last_err: Exception | None = None
+    for model in models_to_try:
+        try:
+            payload = {
+                "model": model,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": user_prompt,
+                        "images": [b64_image],
+                    }
+                ],
+                "stream": False,
+                "options": {
+                    "temperature": 0.1,
+                    "num_predict": 180,
+                },
+            }
+            data = json.dumps(payload).encode("utf-8")
+            req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                res = json.loads(resp.read().decode("utf-8"))
+                msg = res.get("message", {}).get("content", "").strip()
+                if msg:
+                    return _parse_response(msg)
+        except Exception as e:
+            last_err = e
+            continue
+
+    raise last_err if last_err else RuntimeError("All Ollama models failed")
 
 
 def _local_heuristic_action(goal: str, elements: list | None, history: list) -> dict:
@@ -457,6 +491,8 @@ def _local_heuristic_action(goal: str, elements: list | None, history: list) -> 
             "google": f"google.com/search?q={query_plus}",
             "youtube": f"youtube.com/results?search_query={query_plus}",
             "wikipedia": f"en.wikipedia.org/wiki/Special:Search?search={query_plus}",
+            "reddit": f"reddit.com/search/?q={query_plus}",
+            "github": f"github.com/search?q={query_plus}",
         }
         search_url = url_map.get(site, f"{site}.com/search?q={query_plus}")
 
@@ -486,11 +522,16 @@ def _local_heuristic_action(goal: str, elements: list | None, history: list) -> 
         else:
             return {"action": "done", "message": f"{app_name} is open."}
 
-    # 4. Element matching from Set-of-Mark accessibility tree
+    # 4. Element matching from Set-of-Mark accessibility tree (e.g. "click on search", "click search button")
     if elements:
+        stop_words = {"click", "on", "the", "button", "link", "input", "tap", "press", "box", "icon"}
+        keywords = [w for w in clean_goal.split() if w not in stop_words]
+        if not keywords:
+            keywords = [w for w in clean_goal.split() if len(w) > 2]
+
         for el in elements:
             el_name = (el.name or "").lower()
-            if el_name and any(w in el_name for w in clean_goal.split() if len(w) > 3):
+            if el_name and any(kw in el_name for kw in keywords):
                 return {"action": "click", "element": el.id, "narration": f"Clicking {el.name}"}
 
     # 5. Default fallback

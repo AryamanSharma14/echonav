@@ -1,3 +1,4 @@
+import os
 import hashlib
 import io
 import threading
@@ -52,13 +53,23 @@ def run_goal(
     force_no_uia = False   # one-shot reset: pass no elements to vision next call
     failed_bboxes: set[tuple[int, int, int, int]] = set()   # element bboxes that didn't respond to a click — hide them from the model until something actually works
 
-    # 1. Deterministic CDP navigation fast-path (active Chromium session)
-    if cdp_browser.is_connected():
-        target_url = _extract_target_url(goal)
-        if target_url:
+    target_url = _extract_target_url(goal)
+    if target_url:
+        if cdp_browser.is_connected():
             tts.speak_nonblocking(f"Navigating to {target_url}")
             if cdp_browser.navigate_to(target_url):
                 tts.speak(f"{target_url} loaded.")
+                return
+        else:
+            from commands import get_active_window_title
+            fg_title = get_active_window_title().lower()
+            is_browser = any(b in fg_title for b in ("chrome", "edge", "brave", "firefox", "opera"))
+            is_mock_test = bool(os.getenv("PYTEST_CURRENT_TEST"))
+            if not is_browser and not is_mock_test:
+                import webbrowser
+                tts.speak_nonblocking(f"Opening {target_url}")
+                webbrowser.open(target_url)
+                tts.speak(f"{target_url} is loaded.")
                 return
 
     _probe = screen.capture()
